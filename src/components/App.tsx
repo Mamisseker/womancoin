@@ -77,7 +77,7 @@ export const App: FC = () => {
               alignItems: 'center',
               justifyContent: 'flex-start',
               gap: 36,
-              paddingTop: 28,
+              paddingTop: 8,
               position: 'relative',
               zIndex: 1,
             }}
