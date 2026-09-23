@@ -115,9 +115,7 @@ export const App: FC = () => {
               </div>
             </div>
 
-            <TapButton onTap={handleTap} disabled={energy < ENERGY_PER_TAP} />
-
-            {/* Энергия — компактный чип */}
+            {/* Энергия — компактный чип под балансом */}
             <div
               style={{
                 display: 'flex',
@@ -129,6 +127,7 @@ export const App: FC = () => {
                 background: 'var(--wc-surface-2)',
                 padding: '9px 18px',
                 borderRadius: 100,
+                marginTop: -14,
               }}
             >
               <span style={{ fontSize: 14 }}>⚡</span>
@@ -136,6 +135,8 @@ export const App: FC = () => {
                 {energy} тапов
               </span>
             </div>
+
+            <TapButton onTap={handleTap} disabled={energy < ENERGY_PER_TAP} />
           </div>
         )}
 
