@@ -6,32 +6,23 @@ import { BottomNav } from '@/components/BottomNav/BottomNav.tsx';
 import { Placeholder } from '@/components/Placeholder/Placeholder.tsx';
 import { TapButton } from '@/components/TapButton/TapButton.tsx';
 import { TopBar } from '@/components/TopBar/TopBar.tsx';
+import { useProgress } from '@/hooks/useProgress.ts';
 
-const MAX_ENERGY = 1000;
 const ENERGY_PER_TAP = 1;
 
 export const App: FC = () => {
   const isDark = useSignal(miniApp.isDark);
 
-  const [coins, setCoins] = useState(0);
-  const [energy, setEnergy] = useState(MAX_ENERGY);
+  const { coins, energy, tap } = useProgress();
   const [tab, setTab] = useState('tap');
 
   useEffect(() => {
     document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
   }, [isDark]);
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      setEnergy((e) => Math.min(MAX_ENERGY, e + 1));
-    }, 1500);
-    return () => clearInterval(id);
-  }, []);
-
   const handleTap = () => {
     if (energy < ENERGY_PER_TAP) return;
-    setCoins((c) => c + 1);
-    setEnergy((e) => e - ENERGY_PER_TAP);
+    tap();
     try {
       hapticFeedback.impactOccurred('light');
     } catch {
@@ -46,7 +37,7 @@ export const App: FC = () => {
     <AppRoot appearance={isDark ? 'dark' : 'light'}>
       <div
         style={{
-          minHeight: '100vh',
+          height: '100dvh',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',

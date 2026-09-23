@@ -1,4 +1,12 @@
-html {
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  position: fixed;
+  inset: 0;
+  width: 100%;
   background: var(--wc-bg);
 }
 
