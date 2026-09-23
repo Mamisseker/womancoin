@@ -44,7 +44,7 @@ export async function init(options: {
             firstThemeSent = true;
             tp ||= retrieveLaunchParams().tgWebAppThemeParams;
           }
-          return emitEvent('theme_changed', { theme_params: tp as never });
+          return emitEvent('theme_changed', { theme_params: tp });
         }
 
         if (event.name === 'web_app_request_safe_area') {
