@@ -3,9 +3,12 @@ import { useSignal, miniApp, hapticFeedback } from '@tma.js/sdk-react';
 import { useEffect, useState, type FC } from 'react';
 
 import { BottomNav } from '@/components/BottomNav/BottomNav.tsx';
+import { GenderBar } from '@/components/GenderBar/GenderBar.tsx';
+import { GenderSelect } from '@/components/GenderSelect/GenderSelect.tsx';
 import { Placeholder } from '@/components/Placeholder/Placeholder.tsx';
 import { TapButton } from '@/components/TapButton/TapButton.tsx';
 import { TopBar } from '@/components/TopBar/TopBar.tsx';
+import { useGender } from '@/hooks/useGender.ts';
 import { useProgress } from '@/hooks/useProgress.ts';
 
 const ENERGY_PER_TAP = 1;
@@ -14,6 +17,7 @@ export const App: FC = () => {
   const isDark = useSignal(miniApp.isDark);
 
   const { coins, energy, tap } = useProgress();
+  const { gender, setGender, ready } = useGender();
   const [tab, setTab] = useState('tap');
 
   useEffect(() => {
@@ -32,6 +36,10 @@ export const App: FC = () => {
 
   const level = Math.floor(coins / 100) + 1;
   const progress = ((coins % 100) / 100) * 100;
+
+  if (ready && !gender) {
+    return <GenderSelect onSelect={setGender} />;
+  }
 
   return (
     <AppRoot appearance={isDark ? 'dark' : 'light'}>
@@ -136,6 +144,8 @@ export const App: FC = () => {
                 {energy} тапов
               </span>
             </div>
+
+            <GenderBar />
 
             <TapButton onTap={handleTap} disabled={energy < ENERGY_PER_TAP} />
           </div>
