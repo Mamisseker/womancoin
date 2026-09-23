@@ -75,8 +75,9 @@ export const App: FC = () => {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
+              justifyContent: 'flex-start',
               gap: 36,
+              paddingTop: 28,
               position: 'relative',
               zIndex: 1,
             }}
