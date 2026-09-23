@@ -1,0 +1,44 @@
+:root {
+  --wc-bg: #f2f2f7;
+  --wc-surface: #ffffff;
+  --wc-surface-2: rgba(120, 120, 128, 0.08);
+  --wc-text: #000000;
+  --wc-text-2: rgba(60, 60, 67, 0.6);
+  --wc-text-3: rgba(60, 60, 67, 0.3);
+  --wc-separator: rgba(60, 60, 67, 0.18);
+  --wc-accent: #ffb800;
+  --wc-accent-2: #ff8a00;
+  --wc-accent-text: #1a1200;
+  --wc-accent-soft: rgba(255, 184, 0, 0.16);
+  --wc-glow: rgba(255, 184, 0, 0.2);
+  --wc-glass-bg: rgba(255, 255, 255, 0.72);
+  --wc-glass-border: rgba(255, 255, 255, 0.65);
+  --wc-shadow-1: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --wc-shadow-2: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --wc-nav-inactive: rgba(60, 60, 67, 0.45);
+  --wc-radius-s: 12px;
+  --wc-radius-m: 16px;
+  --wc-radius-l: 24px;
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --wc-bg: #000000;
+  --wc-surface: #1c1c1e;
+  --wc-surface-2: rgba(120, 120, 128, 0.24);
+  --wc-text: #ffffff;
+  --wc-text-2: rgba(235, 235, 245, 0.6);
+  --wc-text-3: rgba(235, 235, 245, 0.3);
+  --wc-separator: rgba(84, 84, 88, 0.65);
+  --wc-accent: #ffb800;
+  --wc-accent-2: #ff8a00;
+  --wc-accent-text: #1a1200;
+  --wc-accent-soft: rgba(255, 184, 0, 0.18);
+  --wc-glow: rgba(255, 184, 0, 0.14);
+  --wc-glass-bg: rgba(28, 28, 30, 0.62);
+  --wc-glass-border: rgba(255, 255, 255, 0.1);
+  --wc-shadow-1: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --wc-shadow-2: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --wc-nav-inactive: rgba(235, 235, 245, 0.4);
+  color-scheme: dark;
+}

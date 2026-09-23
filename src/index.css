@@ -1,0 +1,15 @@
+html {
+  background: var(--wc-bg);
+}
+
+body {
+  background: var(--wc-bg);
+  color: var(--wc-text);
+  padding: 0;
+  margin: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+    'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
