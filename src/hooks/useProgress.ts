@@ -4,6 +4,8 @@ import { useCallback, useLayoutEffect, useEffect, useRef, useState } from 'react
 const COINS_KEY = 'wc_coins';
 const ENERGY_KEY = 'wc_energy';
 const UPDATED_KEY = 'wc_updated';
+// Маркер разового сброса экономики (замена старых дешёвых уровней).
+const RESET_KEY = 'wc_reset_v2';
 const BASE_MAX_ENERGY = 1000;
 // Базовая скорость регена: 1 энергия за 5 секунд (без прокачки).
 const BASE_ENERGY_REGEN_MS = 5000;
@@ -118,10 +120,26 @@ export const useProgress = () => {
           COINS_KEY,
           ENERGY_KEY,
           UPDATED_KEY,
+          RESET_KEY,
           ...UPGRADES.map((u) => u.key),
         ];
         const items = await cloudStorage.getItems(keys);
         if (cancelled) return;
+
+        // Разовый сброс прогресса из-за переработанной экономики прокачки:
+        // старые «дешёвые» уровни не стыкуются с новыми ценами.
+        if (!items[RESET_KEY]) {
+          void cloudStorage.setItem(RESET_KEY, '1');
+          for (const def of UPGRADES) {
+            void cloudStorage.setItem(def.key, '0');
+          }
+          void cloudStorage.setItem(COINS_KEY, '0');
+          void cloudStorage.setItem(UPDATED_KEY, String(Date.now()));
+          setLevels(initialLevels());
+          setCoins(0);
+          setEnergy(BASE_MAX_ENERGY);
+          return;
+        }
 
         const readLevel = (key: string): number => {
           const v = items[key] && Number(items[key]);
