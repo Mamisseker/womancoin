@@ -5,7 +5,8 @@ const COINS_KEY = 'wc_coins';
 const ENERGY_KEY = 'wc_energy';
 const UPDATED_KEY = 'wc_updated';
 const BASE_MAX_ENERGY = 1000;
-const BASE_ENERGY_REGEN_MS = 1500;
+// Базовая скорость регена: 1 энергия за 5 секунд (без прокачки).
+const BASE_ENERGY_REGEN_MS = 5000;
 // Пассивный доход начисляется раз в минуту, пока приложение открыто.
 const PASSIVE_TICK_MS = 60_000;
 
@@ -29,8 +30,8 @@ export const UPGRADES: UpgradeDef[] = [
     icon: '💪',
     title: 'Урон за тап',
     detail: '+1 монета за каждый тап',
-    baseCost: 100,
-    growth: 1.18,
+    baseCost: 300,
+    growth: 1.22,
     maxLevel: 20,
   },
   {
@@ -39,8 +40,8 @@ export const UPGRADES: UpgradeDef[] = [
     icon: '🔋',
     title: 'Макс. энергия',
     detail: '+200 к запасу энергии',
-    baseCost: 200,
-    growth: 1.18,
+    baseCost: 500,
+    growth: 1.22,
     maxLevel: 25,
   },
   {
@@ -49,8 +50,8 @@ export const UPGRADES: UpgradeDef[] = [
     icon: '⚡',
     title: 'Реген энергии',
     detail: '+12% к скорости восстановления',
-    baseCost: 300,
-    growth: 1.16,
+    baseCost: 800,
+    growth: 1.2,
     maxLevel: 20,
   },
   {
@@ -59,8 +60,8 @@ export const UPGRADES: UpgradeDef[] = [
     icon: '💰',
     title: 'Пассивный доход',
     detail: '+40 монет в час',
-    baseCost: 500,
-    growth: 1.15,
+    baseCost: 1200,
+    growth: 1.18,
     maxLevel: 20,
   },
 ];
@@ -133,7 +134,6 @@ export const useProgress = () => {
 
         const max = getMaxEnergy(nextLevels.energy);
         const coinsVal = items[COINS_KEY] && Number(items[COINS_KEY]);
-        const energyVal = items[ENERGY_KEY] && Number(items[ENERGY_KEY]);
         const updatedVal = items[UPDATED_KEY] ? Number(items[UPDATED_KEY]) : Date.now();
 
         let nextCoins = 0;
@@ -147,11 +147,11 @@ export const useProgress = () => {
 
         setCoins(nextCoins);
 
+        // Энергия не восстанавливается мгновенно при открытии —
+        // она копится только в реальном времени через таймер регена.
+        const energyVal = items[ENERGY_KEY] ? Number(items[ENERGY_KEY]) : 0;
         if (energyVal && !Number.isNaN(energyVal)) {
-          const regen = getRegenMs(nextLevels.regen);
-          const passed = Math.floor((Date.now() - updatedVal) / regen);
-          const restored = Math.max(0, energyVal);
-          setEnergy(Math.min(max, restored + passed));
+          setEnergy(Math.min(max, Math.max(0, Math.floor(energyVal))));
         } else {
           setEnergy(max);
         }
@@ -234,9 +234,12 @@ export const useProgress = () => {
     if (coins < cost) return false;
 
     const next = { ...levelsRef.current, [id]: current + 1 };
-    setCoins((c) => c - cost);
+    const nextCoins = coins - cost;
+    setCoins(nextCoins);
     setLevels(next);
     void cloudStorage.setItem(def.key, String(current + 1));
+    void cloudStorage.setItem(COINS_KEY, String(nextCoins));
+    void cloudStorage.setItem(UPDATED_KEY, String(Date.now()));
     return true;
   }, [coins]);
 
