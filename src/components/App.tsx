@@ -10,6 +10,7 @@ import { StatsPage } from '@/components/StatsPage/StatsPage.tsx';
 import { TapButton } from '@/components/TapButton/TapButton.tsx';
 import { TopBar } from '@/components/TopBar/TopBar.tsx';
 import { UpgradesSection } from '@/components/UpgradesSection/UpgradesSection.tsx';
+import { WalletPage } from '@/components/WalletPage/WalletPage.tsx';
 import { useGender } from '@/hooks/useGender.ts';
 import { useProgress } from '@/hooks/useProgress.ts';
 import { useReferral } from '@/hooks/useReferral.ts';
@@ -210,11 +211,7 @@ export const App: FC = () => {
         )}
 
         {tab === 'wallet' && (
-          <Placeholder
-            icon="👛"
-            title="Кошелёк"
-            text="Подключи TON-кошелёк, чтобы вывести заработанные Woman Coins."
-          />
+          <WalletPage coins={coins} addCoins={addCoins} />
         )}
 
         <BottomNav active={tab} onChange={setTab} />
