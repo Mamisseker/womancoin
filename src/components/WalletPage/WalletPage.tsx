@@ -1,4 +1,3 @@
-import { TonConnectButton, useTonWallet } from '@tonconnect/ui-react';
 import type { FC } from 'react';
 
 interface WalletPerk {
@@ -35,13 +34,7 @@ const PERKS: WalletPerk[] = [
   },
 ];
 
-const formatAddress = (address: string): string =>
-  address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
-
 export const WalletPage: FC = () => {
-  const wallet = useTonWallet();
-  const connected = Boolean(wallet?.account?.address);
-
   return (
     <div
       style={{
@@ -78,7 +71,7 @@ export const WalletPage: FC = () => {
             letterSpacing: -0.5,
           }}
         >
-          TON-кошелёк
+          Кошелёк
         </div>
         <div
           style={{
@@ -89,32 +82,8 @@ export const WalletPage: FC = () => {
             lineHeight: 1.45,
           }}
         >
-          Подключай кошелёк, чтобы оплачивать приколы в WomanCoin — стили,
-          статусы, бусты и подарки.
+          Приколы и бонусы для WomanCoin — стили, статусы, бусты и подарки.
         </div>
-      </div>
-
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 8,
-        }}
-      >
-        <TonConnectButton />
-        {connected && wallet?.account?.address && (
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: 'var(--wc-text-2)',
-              fontVariantNumeric: 'tabular-nums',
-            }}
-          >
-            {formatAddress(wallet.account.address)}
-          </div>
-        )}
       </div>
 
       {/* Статус техработ: покупки отключены */}
