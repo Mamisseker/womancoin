@@ -3,9 +3,9 @@ import { useSignal, miniApp, hapticFeedback } from '@tma.js/sdk-react';
 import { useEffect, useState, type FC } from 'react';
 
 import { BottomNav } from '@/components/BottomNav/BottomNav.tsx';
-import { GenderBar } from '@/components/GenderBar/GenderBar.tsx';
 import { GenderSelect } from '@/components/GenderSelect/GenderSelect.tsx';
 import { Placeholder } from '@/components/Placeholder/Placeholder.tsx';
+import { StatsPage } from '@/components/StatsPage/StatsPage.tsx';
 import { TapButton } from '@/components/TapButton/TapButton.tsx';
 import { TopBar } from '@/components/TopBar/TopBar.tsx';
 import { useGender } from '@/hooks/useGender.ts';
@@ -37,7 +37,11 @@ export const App: FC = () => {
   const level = Math.floor(coins / 100) + 1;
   const progress = ((coins % 100) / 100) * 100;
 
-  if (ready && !gender) {
+  if (!ready) {
+    return null;
+  }
+
+  if (!gender) {
     return <GenderSelect onSelect={setGender} />;
   }
 
@@ -124,7 +128,7 @@ export const App: FC = () => {
               </div>
             </div>
 
-            {/* Энергия — компактный чип под балансом */}
+{/* Энергия — компактный чип под балансом */}
             <div
               style={{
                 display: 'flex',
@@ -145,10 +149,12 @@ export const App: FC = () => {
               </span>
             </div>
 
-            <GenderBar />
-
             <TapButton onTap={handleTap} disabled={energy < ENERGY_PER_TAP} />
           </div>
+        )}
+
+        {tab === 'stats' && (
+          <StatsPage />
         )}
 
         {tab === 'boost' && (

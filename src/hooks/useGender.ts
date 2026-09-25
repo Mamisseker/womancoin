@@ -18,6 +18,10 @@ export const useGender = () => {
     let cancelled = false;
 
     void (async () => {
+      const timeout = window.setTimeout(() => {
+        if (!cancelled) setReady(true);
+      }, 800);
+
       try {
         const value = await cloudStorage.getItem(GENDER_KEY);
         if (!cancelled && (value === 'male' || value === 'female')) {
@@ -26,6 +30,7 @@ export const useGender = () => {
       } catch {
         // CloudStorage недоступен (например, вне Telegram) — оставляем экран выбора.
       } finally {
+        window.clearTimeout(timeout);
         if (!cancelled) {
           setReady(true);
         }

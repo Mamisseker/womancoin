@@ -18,7 +18,7 @@ export const GenderBar: FC = () => {
     <div
       style={{
         width: '100%',
-        maxWidth: 320,
+        maxWidth: '100%',
         display: 'flex',
         flexDirection: 'column',
         gap: 10,
