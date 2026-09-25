@@ -1,6 +1,5 @@
-import { motion } from 'framer-motion';
-import { useReward } from 'partycles';
-import { useRef, type FC } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useCallback, useRef, useState, type FC } from 'react';
 
 import manCoinImg from './Man-coin.png';
 
@@ -9,20 +8,48 @@ interface TapButtonProps {
   disabled?: boolean;
 }
 
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+  rotation: number;
+  scale: number;
+  delay: number;
+}
+
+const BURST_COUNT = 7;
+const PARTICLE_LIFETIME = 700;
+
 export const TapButton: FC<TapButtonProps> = ({ onTap, disabled }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const [particles, setParticles] = useState<Particle[]>([]);
 
-  const { reward: coinReward } = useReward(buttonRef, 'coins', {
-    particleCount: 12,
-    spread: 80,
-    startVelocity: 35,
-    elementSize: 24,
-    lifetime: 1200,
-  });
+  const spawnBurst = useCallback(() => {
+    const now = Date.now();
+    const next: Particle[] = Array.from({ length: BURST_COUNT }, () => {
+      // Основной вектор — вверх, с лёгким разбросом в стороны.
+      const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.7;
+      const distance = 90 + Math.random() * 120;
+      return {
+        id: now + Math.random(),
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance - 20,
+        rotation: (Math.random() - 0.5) * 200,
+        scale: 0.7 + Math.random() * 0.8,
+        delay: Math.random() * 0.05,
+      };
+    });
+
+    setParticles((p) => [...p, ...next]);
+
+    window.setTimeout(() => {
+      setParticles((p) => p.filter((part) => !next.includes(part)));
+    }, PARTICLE_LIFETIME);
+  }, []);
 
   const handleClick = () => {
     if (disabled) return;
-    void coinReward();
+    spawnBurst();
     onTap();
   };
 
@@ -69,6 +96,38 @@ export const TapButton: FC<TapButtonProps> = ({ onTap, disabled }) => {
           }}
         />
       </motion.button>
+
+      {/* Монеты, вылетающие при тапе */}
+      <AnimatePresence>
+        {particles.map((part) => (
+          <motion.img
+            key={part.id}
+            src={manCoinImg}
+            alt=""
+            initial={{ x: 0, y: 0, opacity: 1, scale: 0.3, rotate: 0 }}
+            animate={{
+              x: part.x,
+              y: part.y,
+              opacity: 0,
+              scale: part.scale,
+              rotate: part.rotation,
+            }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6, ease: 'easeOut', delay: part.delay }}
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              width: 30,
+              height: 30,
+              objectFit: 'contain',
+              pointerEvents: 'none',
+              zIndex: 3,
+              willChange: 'transform, opacity',
+            }}
+          />
+        ))}
+      </AnimatePresence>
     </div>
   );
 };

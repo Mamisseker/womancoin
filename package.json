@@ -20,7 +20,6 @@
     "@tonconnect/ui-react": "^2.2.0",
     "eruda": "^3.4.3",
     "framer-motion": "^13.4.0",
-    "partycles": "^1.2.6",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.30.1"
