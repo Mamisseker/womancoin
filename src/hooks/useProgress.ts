@@ -150,11 +150,16 @@ export const useProgress = () => {
 
         setCoins(nextCoins);
 
-        // Энергия не восстанавливается мгновенно при открытии —
-        // она копится только в реальном времени через таймер регена.
+        // Энергия восстанавливается по времени: к сохранённому значению
+        // добавляется реген за секунды, прошедшие с последнего сейва.
+        // (Скорость медленная — 1 энергия за 5с без прокачки.)
         const energyVal = items[ENERGY_KEY] ? Number(items[ENERGY_KEY]) : 0;
         if (energyVal && !Number.isNaN(energyVal)) {
-          setEnergy(Math.min(max, Math.max(0, Math.floor(energyVal))));
+          const regen = getRegenMs(nextLevels.regen);
+          const elapsed = Math.max(0, Date.now() - updatedVal);
+          const regenerated = Math.floor(elapsed / regen);
+          const restored = Math.max(0, Math.floor(energyVal)) + regenerated;
+          setEnergy(Math.min(max, restored));
         } else {
           setEnergy(max);
         }
