@@ -14,6 +14,7 @@ import { WalletPage } from '@/components/WalletPage/WalletPage.tsx';
 import { useGender } from '@/hooks/useGender.ts';
 import { useProgress } from '@/hooks/useProgress.ts';
 import { useReferral } from '@/hooks/useReferral.ts';
+import { getLevelInfo } from '@/lib/levels.ts';
 
 const ENERGY_PER_TAP = 1;
 
@@ -51,8 +52,7 @@ export const App: FC = () => {
     }
   };
 
-  const level = Math.floor(coins / 100) + 1;
-  const progress = ((coins % 100) / 100) * 100;
+  const { level, progress } = getLevelInfo(coins);
 
   if (!ready) {
     return null;
