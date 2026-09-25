@@ -27,7 +27,17 @@ export default defineConfig({
   ],
   build: {
     target: 'esnext',
-    minify: 'terser'
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        passes: 3,
+        drop_console: true,
+        toplevel: true,
+      },
+      mangle: {
+        toplevel: true,
+      },
+    },
   },
   publicDir: './public',
   server: {

@@ -1,6 +1,8 @@
 import { cloudStorage } from '@tma.js/sdk-react';
 import { useCallback, useLayoutEffect, useEffect, useRef, useState } from 'react';
 
+import { decrypt, encrypt } from '@/lib/storageCodec.ts';
+
 const COINS_KEY = 'wc_coins';
 const ENERGY_KEY = 'wc_energy';
 const UPDATED_KEY = 'wc_updated';
@@ -129,21 +131,32 @@ export const useProgress = () => {
         // Разовый сброс прогресса из-за переработанной экономики прокачки:
         // старые «дешёвые» уровни не стыкуются с новыми ценами.
         if (!items[RESET_KEY]) {
-          void cloudStorage.setItem(RESET_KEY, '1');
+          void cloudStorage.setItem(RESET_KEY, encrypt('1'));
           for (const def of UPGRADES) {
-            void cloudStorage.setItem(def.key, '0');
+            void cloudStorage.setItem(def.key, encrypt('0'));
           }
-          void cloudStorage.setItem(COINS_KEY, '0');
-          void cloudStorage.setItem(UPDATED_KEY, String(Date.now()));
+          void cloudStorage.setItem(COINS_KEY, encrypt('0'));
+          void cloudStorage.setItem(UPDATED_KEY, encrypt(String(Date.now())));
           setLevels(initialLevels());
           setCoins(0);
           setEnergy(BASE_MAX_ENERGY);
           return;
         }
 
+        // Чтение числа из CloudStorage: значение может быть либо зашифрованным
+        // (новый формат с префиксом v1:), либо устаревшим plaintext-числом.
+        // Невалидные/взломанные значения трактуются как «нет данных».
+        const readNumber = (key: string): number | null => {
+          const raw = items[key];
+          if (!raw) return null;
+          const num = raw.startsWith('v1:') ? decrypt(raw) : raw;
+          if (num === null || !Number.isFinite(Number(num))) return null;
+          return Number(num);
+        };
+
         const readLevel = (key: string): number => {
-          const v = items[key] && Number(items[key]);
-          return v && !Number.isNaN(v) ? Math.max(0, Math.floor(v)) : 0;
+          const v = readNumber(key);
+          return v === null ? 0 : Math.max(0, Math.floor(v));
         };
         const nextLevels = {
           damage: readLevel('wc_up_damage'),
@@ -154,13 +167,11 @@ export const useProgress = () => {
         setLevels(nextLevels);
 
         const max = getMaxEnergy(nextLevels.energy);
-        const coinsVal = items[COINS_KEY] && Number(items[COINS_KEY]);
-        const updatedVal = items[UPDATED_KEY] ? Number(items[UPDATED_KEY]) : Date.now();
+        const coinsRaw = readNumber(COINS_KEY);
+        const updatedRaw = readNumber(UPDATED_KEY);
+        const updatedVal = updatedRaw ?? Date.now();
 
-        let nextCoins = 0;
-        if (coinsVal && !Number.isNaN(coinsVal)) {
-          nextCoins = Math.floor(coinsVal);
-        }
+        let nextCoins = coinsRaw === null ? 0 : Math.floor(coinsRaw);
 
         // Пассивный доход за время, пока приложение было закрыто.
         const hours = Math.max(0, (Date.now() - updatedVal) / 3_600_000);
@@ -171,12 +182,12 @@ export const useProgress = () => {
         // Энергия восстанавливается по времени: к сохранённому значению
         // добавляется реген за секунды, прошедшие с последнего сейва.
         // (Скорость медленная — 1 энергия за 5с без прокачки.)
-        const energyVal = items[ENERGY_KEY] ? Number(items[ENERGY_KEY]) : 0;
-        if (energyVal && !Number.isNaN(energyVal)) {
+        const energyRaw = readNumber(ENERGY_KEY);
+        if (energyRaw !== null) {
           const regen = getRegenMs(nextLevels.regen);
           const elapsed = Math.max(0, Date.now() - updatedVal);
           const regenerated = Math.floor(elapsed / regen);
-          const restored = Math.max(0, Math.floor(energyVal)) + regenerated;
+          const restored = Math.max(0, Math.floor(energyRaw)) + regenerated;
           setEnergy(Math.min(max, restored));
         } else {
           setEnergy(max);
@@ -216,13 +227,14 @@ export const useProgress = () => {
   }, []);
 
   // Мгновенная запись прогресса в CloudStorage (используется при закрытии).
+  // Все значения шифруются (см. lib/storageCodec.ts).
   const write = useCallback(() => {
     const { coins: c, energy: e, levels: l } = stateRef.current;
-    void cloudStorage.setItem(COINS_KEY, String(c));
-    void cloudStorage.setItem(ENERGY_KEY, String(e));
-    void cloudStorage.setItem(UPDATED_KEY, String(Date.now()));
+    void cloudStorage.setItem(COINS_KEY, encrypt(String(c)));
+    void cloudStorage.setItem(ENERGY_KEY, encrypt(String(e)));
+    void cloudStorage.setItem(UPDATED_KEY, encrypt(String(Date.now())));
     for (const def of UPGRADES) {
-      void cloudStorage.setItem(def.key, String(l[def.id]));
+      void cloudStorage.setItem(def.key, encrypt(String(l[def.id])));
     }
   }, []);
 
@@ -283,9 +295,9 @@ export const useProgress = () => {
     const nextCoins = stateRef.current.coins - cost;
     setCoins(nextCoins);
     setLevels(next);
-    void cloudStorage.setItem(def.key, String(current + 1));
-    void cloudStorage.setItem(COINS_KEY, String(nextCoins));
-    void cloudStorage.setItem(UPDATED_KEY, String(Date.now()));
+    void cloudStorage.setItem(def.key, encrypt(String(current + 1)));
+    void cloudStorage.setItem(COINS_KEY, encrypt(String(nextCoins)));
+    void cloudStorage.setItem(UPDATED_KEY, encrypt(String(Date.now())));
     return true;
   }, []);
 

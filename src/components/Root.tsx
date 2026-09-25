@@ -3,6 +3,9 @@ import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import { App } from '@/components/App.tsx';
 import { ErrorBoundary } from '@/components/ErrorBoundary.tsx';
 import { publicUrl } from '@/helpers/publicUrl.ts';
+import { mountDevtoolsGuard } from '@/lib/devtoolsGuard.ts';
+
+mountDevtoolsGuard();
 
 function ErrorBoundaryError({ error }: { error: unknown }) {
   return (
