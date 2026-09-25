@@ -92,6 +92,9 @@ export const useProgress = () => {
   const [levels, setLevels] = useState<Record<UpgradeId, number>>(initialLevels);
   const loaded = useRef(false);
   const saveTimer = useRef<number | null>(null);
+  // Актуальные значения для мгновенной записи при сворачивании/закрытии.
+  const stateRef = useRef({ coins: 0, energy: BASE_MAX_ENERGY, levels: initialLevels() });
+  stateRef.current = { coins, energy, levels };
   const levelsRef = useRef(levels);
   levelsRef.current = levels;
 
@@ -189,29 +192,49 @@ export const useProgress = () => {
     return () => window.clearInterval(id);
   }, []);
 
-  // Сохранение прогресса в CloudStorage (с дебаунсом на тапы).
-  const save = useCallback((c: number, e: number, l: Record<UpgradeId, number>) => {
-    if (!loaded.current) return;
+  // Мгновенная запись прогресса в CloudStorage (используется при закрытии).
+  const write = useCallback(() => {
+    const { coins: c, energy: e, levels: l } = stateRef.current;
+    void cloudStorage.setItem(COINS_KEY, String(c));
+    void cloudStorage.setItem(ENERGY_KEY, String(e));
+    void cloudStorage.setItem(UPDATED_KEY, String(Date.now()));
+    for (const def of UPGRADES) {
+      void cloudStorage.setItem(def.key, String(l[def.id]));
+    }
+  }, []);
 
-    const write = () => {
-      void cloudStorage.setItem(COINS_KEY, String(c));
-      void cloudStorage.setItem(ENERGY_KEY, String(e));
-      void cloudStorage.setItem(UPDATED_KEY, String(Date.now()));
-      for (const def of UPGRADES) {
-        void cloudStorage.setItem(def.key, String(l[def.id]));
-      }
-    };
-
+  // Сохранение прогресса в CloudStorage с небольшим дебаунсом на тапы,
+  // чтобы не писать хранилище на каждый тап.
+  const save = useCallback(() => {
     if (saveTimer.current) {
       window.clearTimeout(saveTimer.current);
     }
-    saveTimer.current = window.setTimeout(write, 700);
-  }, []);
+    saveTimer.current = window.setTimeout(write, 400);
+  }, [write]);
+
+  // Гарантированный сброс при сворачивании/закрытии/обновлении страницы:
+  // setTimeout в WebView Telegram не выполняется, если приложение свернули,
+  // поэтому «всё скатывается обратно» — записываем значения сразу.
+  useEffect(() => {
+    const flush = () => {
+      if (loaded.current) write();
+    };
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flush();
+    });
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('beforeunload', flush);
+      document.removeEventListener('visibilitychange', flush);
+    };
+  }, [write]);
 
   // Сейв при каждом изменении монет/энергии.
   useEffect(() => {
     if (loaded.current) {
-      save(coins, energy, levels);
+      save();
     }
   }, [coins, energy, levels, save]);
 
@@ -231,17 +254,17 @@ export const useProgress = () => {
     if (current >= def.maxLevel) return false;
 
     const cost = getCost(def, current);
-    if (coins < cost) return false;
+    if (stateRef.current.coins < cost) return false;
 
     const next = { ...levelsRef.current, [id]: current + 1 };
-    const nextCoins = coins - cost;
+    const nextCoins = stateRef.current.coins - cost;
     setCoins(nextCoins);
     setLevels(next);
     void cloudStorage.setItem(def.key, String(current + 1));
     void cloudStorage.setItem(COINS_KEY, String(nextCoins));
     void cloudStorage.setItem(UPDATED_KEY, String(Date.now()));
     return true;
-  }, [coins]);
+  }, []);
 
   return {
     coins,
