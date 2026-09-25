@@ -9,6 +9,7 @@ import { Placeholder } from '@/components/Placeholder/Placeholder.tsx';
 import { StatsPage } from '@/components/StatsPage/StatsPage.tsx';
 import { TapButton } from '@/components/TapButton/TapButton.tsx';
 import { TopBar } from '@/components/TopBar/TopBar.tsx';
+import { UpgradesSection } from '@/components/UpgradesSection/UpgradesSection.tsx';
 import { useGender } from '@/hooks/useGender.ts';
 import { useProgress } from '@/hooks/useProgress.ts';
 import { useReferral } from '@/hooks/useReferral.ts';
@@ -18,7 +19,8 @@ const ENERGY_PER_TAP = 1;
 export const App: FC = () => {
   const isDark = useSignal(miniApp.isDark);
 
-  const { coins, energy, tap, addCoins } = useProgress();
+  const { coins, energy, tap, addCoins, levels, coinsPerTap, maxEnergy, upgradeCost, buyUpgrade } =
+    useProgress();
   const { gender, setGender, ready } = useGender();
   const { referralLink, invitedBy, bonus, claimBonus, usingTelegram, demoStats } =
     useReferral();
@@ -101,11 +103,12 @@ export const App: FC = () => {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'flex-start',
               gap: 36,
               paddingTop: 8,
               position: 'relative',
               zIndex: 1,
+              overflowY: 'auto',
+              overscrollBehavior: 'contain',
             }}
           >
             {/* Баланс — крупный title на фоне */}
@@ -115,6 +118,7 @@ export const App: FC = () => {
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: 6,
+                flexShrink: 0,
               }}
             >
               <div
@@ -142,7 +146,7 @@ export const App: FC = () => {
               </div>
             </div>
 
-{/* Энергия — компактный чип под балансом */}
+            {/* Энергия — компактный чип под балансом */}
             <div
               style={{
                 display: 'flex',
@@ -155,15 +159,32 @@ export const App: FC = () => {
                 padding: '9px 18px',
                 borderRadius: 100,
                 marginTop: -14,
+                flexShrink: 0,
               }}
             >
               <span style={{ fontSize: 14 }}>⚡</span>
               <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {energy} тапов
+                {energy}/{maxEnergy}
+              </span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: 'var(--wc-text-3)',
+                }}
+              >
+                · +{coinsPerTap}/тап
               </span>
             </div>
 
             <TapButton onTap={handleTap} disabled={energy < ENERGY_PER_TAP} />
+
+            <UpgradesSection
+              coins={coins}
+              levels={levels}
+              upgradeCost={upgradeCost}
+              buyUpgrade={buyUpgrade}
+            />
           </div>
         )}
 
