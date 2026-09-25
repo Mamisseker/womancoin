@@ -178,7 +178,7 @@ export const App: FC = () => {
               </span>
             </div>
 
-            <TapButton onTap={handleTap} disabled={energy < ENERGY_PER_TAP} />
+            <TapButton gender={gender} onTap={handleTap} disabled={energy < ENERGY_PER_TAP} />
 
             <UpgradesSection
               coins={coins}

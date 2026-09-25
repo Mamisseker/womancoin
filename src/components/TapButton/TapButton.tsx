@@ -1,9 +1,13 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useRef, useState, type FC } from 'react';
 
+import type { Gender } from '@/hooks/useGender.ts';
+
 import manCoinImg from './Man-coin.png';
+import woCoinImg from './Wo-coin.png';
 
 interface TapButtonProps {
+  gender?: Gender;
   onTap: () => void;
   disabled?: boolean;
 }
@@ -20,9 +24,10 @@ interface Particle {
 const BURST_COUNT = 7;
 const PARTICLE_LIFETIME = 700;
 
-export const TapButton: FC<TapButtonProps> = ({ onTap, disabled }) => {
+export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
+  const coinImg = gender === 'female' ? woCoinImg : manCoinImg;
 
   const spawnBurst = useCallback(() => {
     const now = Date.now();
@@ -85,8 +90,8 @@ export const TapButton: FC<TapButtonProps> = ({ onTap, disabled }) => {
         }}
       >
         <img
-          src={manCoinImg}
-          alt="Man-coin"
+          src={coinImg}
+          alt="WomanCoin"
           style={{
             width: '82%',
             height: '82%',
@@ -102,7 +107,7 @@ export const TapButton: FC<TapButtonProps> = ({ onTap, disabled }) => {
         {particles.map((part) => (
           <motion.img
             key={part.id}
-            src={manCoinImg}
+            src={coinImg}
             alt=""
             initial={{ x: 0, y: 0, opacity: 1, scale: 0.3, rotate: 0 }}
             animate={{
