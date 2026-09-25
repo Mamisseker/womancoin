@@ -211,7 +211,7 @@ export const App: FC = () => {
         )}
 
         {tab === 'wallet' && (
-          <WalletPage coins={coins} addCoins={addCoins} />
+          <WalletPage />
         )}
 
         <BottomNav active={tab} onChange={setTab} />
