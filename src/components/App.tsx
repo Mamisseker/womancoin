@@ -3,6 +3,7 @@ import { useSignal, miniApp, hapticFeedback } from '@tma.js/sdk-react';
 import { useEffect, useState, type FC } from 'react';
 
 import { BottomNav } from '@/components/BottomNav/BottomNav.tsx';
+import { FriendsPage } from '@/components/FriendsPage/FriendsPage.tsx';
 import { GenderSelect } from '@/components/GenderSelect/GenderSelect.tsx';
 import { Placeholder } from '@/components/Placeholder/Placeholder.tsx';
 import { StatsPage } from '@/components/StatsPage/StatsPage.tsx';
@@ -10,19 +11,32 @@ import { TapButton } from '@/components/TapButton/TapButton.tsx';
 import { TopBar } from '@/components/TopBar/TopBar.tsx';
 import { useGender } from '@/hooks/useGender.ts';
 import { useProgress } from '@/hooks/useProgress.ts';
+import { useReferral } from '@/hooks/useReferral.ts';
 
 const ENERGY_PER_TAP = 1;
 
 export const App: FC = () => {
   const isDark = useSignal(miniApp.isDark);
 
-  const { coins, energy, tap } = useProgress();
+  const { coins, energy, tap, addCoins } = useProgress();
   const { gender, setGender, ready } = useGender();
+  const { referralLink, invitedBy, bonus, claimBonus, usingTelegram, demoStats } =
+    useReferral();
   const [tab, setTab] = useState('tap');
 
   useEffect(() => {
     document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
   }, [isDark]);
+
+  // Разовый бонус приглашённому по реферальной ссылке.
+  useEffect(() => {
+    if (bonus > 0) {
+      const amount = claimBonus();
+      if (amount > 0) {
+        addCoins(amount);
+      }
+    }
+  }, [bonus, claimBonus, addCoins]);
 
   const handleTap = () => {
     if (energy < ENERGY_PER_TAP) return;
@@ -166,10 +180,11 @@ export const App: FC = () => {
         )}
 
         {tab === 'friends' && (
-          <Placeholder
-            icon="👥"
-            title="Друзья"
-            text="Приглашай друзей, получай бонусы за каждого и расти вместе."
+          <FriendsPage
+            referralLink={referralLink}
+            usingTelegram={usingTelegram}
+            invitedBy={invitedBy}
+            demoStats={demoStats}
           />
         )}
 

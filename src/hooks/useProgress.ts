@@ -90,5 +90,9 @@ export const useProgress = () => {
     setEnergy((e) => Math.max(0, e - 1));
   }, []);
 
-  return { coins, energy, tap };
+  const addCoins = useCallback((amount: number) => {
+    setCoins((c) => c + amount);
+  }, []);
+
+  return { coins, energy, tap, addCoins };
 };
