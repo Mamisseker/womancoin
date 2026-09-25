@@ -30,8 +30,8 @@ export const UPGRADES: UpgradeDef[] = [
     icon: '💪',
     title: 'Урон за тап',
     detail: '+1 монета за каждый тап',
-    baseCost: 300,
-    growth: 1.22,
+    baseCost: 500,
+    growth: 1.38,
     maxLevel: 20,
   },
   {
@@ -40,8 +40,8 @@ export const UPGRADES: UpgradeDef[] = [
     icon: '🔋',
     title: 'Макс. энергия',
     detail: '+200 к запасу энергии',
-    baseCost: 500,
-    growth: 1.22,
+    baseCost: 800,
+    growth: 1.38,
     maxLevel: 25,
   },
   {
@@ -50,8 +50,8 @@ export const UPGRADES: UpgradeDef[] = [
     icon: '⚡',
     title: 'Реген энергии',
     detail: '+12% к скорости восстановления',
-    baseCost: 800,
-    growth: 1.2,
+    baseCost: 1200,
+    growth: 1.36,
     maxLevel: 20,
   },
   {
@@ -60,8 +60,8 @@ export const UPGRADES: UpgradeDef[] = [
     icon: '💰',
     title: 'Пассивный доход',
     detail: '+40 монет в час',
-    baseCost: 1200,
-    growth: 1.18,
+    baseCost: 2000,
+    growth: 1.33,
     maxLevel: 20,
   },
 ];
