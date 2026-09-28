@@ -34,39 +34,14 @@ export const WalletPage: FC = () => {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 20,
-        paddingTop: 32,
+        justifyContent: 'center',
         paddingLeft: 24,
         paddingRight: 24,
-        paddingBottom: 24,
         position: 'relative',
         zIndex: 1,
-        overflowY: 'auto',
-        overscrollBehavior: 'contain',
+        overflow: 'hidden',
       }}
     >
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 8,
-          textAlign: 'center',
-        }}
-      >
-        <div style={{ fontSize: 40, lineHeight: 1 }}>👛</div>
-        <div
-          style={{
-            fontSize: 24,
-            fontWeight: 800,
-            color: 'var(--wc-text)',
-            letterSpacing: -0.5,
-          }}
-        >
-          Кошелёк
-        </div>
-      </div>
-
       {/* Скоро листинг: таймер-заглушка */}
       <div
         style={{
@@ -85,9 +60,10 @@ export const WalletPage: FC = () => {
         <div style={{ fontSize: 28, lineHeight: 1 }}>🚀</div>
         <div
           style={{
-            fontSize: 16,
+            fontSize: 24,
             fontWeight: 800,
             color: 'var(--wc-text)',
+            letterSpacing: -0.5,
           }}
         >
           Скоро листинг
