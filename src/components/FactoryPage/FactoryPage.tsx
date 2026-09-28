@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 
-import factoryImg from '@/components/FactoryTab/factory.png';
+import factoryImg from '@/components/FactoryPage/factory.png';
 
 interface FactoryPageProps {
   title?: string;
