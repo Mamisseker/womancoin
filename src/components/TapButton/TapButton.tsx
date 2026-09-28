@@ -3,8 +3,8 @@ import { useCallback, useRef, useState, type FC } from 'react';
 
 import type { Gender } from '@/hooks/useGender.ts';
 
-import manCoinImg from './Man-coin.svg';
-import woCoinImg from './Wo-coin.svg';
+import manCoinImg from './Man-coin.png';
+import woCoinImg from './Wo-coin.png';
 
 interface TapButtonProps {
   gender?: Gender;
