@@ -3,8 +3,8 @@ import { useCallback, useRef, useState, type FC } from 'react';
 
 import type { Gender } from '@/hooks/useGender.ts';
 
-import manCoinImg from './Man-coin.png';
-import woCoinImg from './Wo-coin.png';
+import manCoinImg from './Man-coin.svg';
+import woCoinImg from './Wo-coin.svg';
 
 interface TapButtonProps {
   gender?: Gender;
@@ -22,7 +22,7 @@ interface Particle {
   delay: number;
 }
 
-const BURST_COUNT = 12;
+const BURST_COUNT = 6;
 const PARTICLE_LIFETIME = 700;
 // Радиус кнопки (круг 260px) — частицы стартуют на его границе.
 const BUTTON_RADIUS = 130;
