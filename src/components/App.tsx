@@ -3,9 +3,9 @@ import { useSignal, miniApp, hapticFeedback } from '@tma.js/sdk-react';
 import { useEffect, useState, type FC } from 'react';
 
 import { BottomNav } from '@/components/BottomNav/BottomNav.tsx';
+import { FactoryPage } from '@/components/FactoryPage/FactoryPage.tsx';
 import { FriendsPage } from '@/components/FriendsPage/FriendsPage.tsx';
 import { GenderSelect } from '@/components/GenderSelect/GenderSelect.tsx';
-import { Placeholder } from '@/components/Placeholder/Placeholder.tsx';
 import { StatsPage } from '@/components/StatsPage/StatsPage.tsx';
 import { TapButton } from '@/components/TapButton/TapButton.tsx';
 import { TopBar } from '@/components/TopBar/TopBar.tsx';
@@ -194,11 +194,7 @@ export const App: FC = () => {
         )}
 
         {tab === 'boost' && (
-          <Placeholder
-            icon="⚡"
-            title="Буст"
-            text="Усилители тапа: x2 к награде, автопап, полное восстановление энергии."
-          />
+          <FactoryPage />
         )}
 
         {tab === 'friends' && (

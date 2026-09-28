@@ -32,10 +32,12 @@ const tabs: Tab[] = [
   },
   {
     id: 'boost',
-    label: 'Буст',
+    label: 'Завод',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M13 2 4.09 12.35A1 1 0 0 0 4.86 14H11l-1 8 8.91-10.35A1 1 0 0 0 18.14 10H12l1-8z" />
+        <path d="M2 20h20" />
+        <path d="M4 20V8l6 4V8l6 4V6h4v14" />
+        <path d="M15 6V4h4v2" />
       </svg>
     ),
   },
