@@ -14,15 +14,18 @@ interface TapButtonProps {
 
 interface Particle {
   id: number;
-  x: number;
-  y: number;
+  angle: number;
+  startRadius: number;
+  distance: number;
   rotation: number;
   scale: number;
   delay: number;
 }
 
-const BURST_COUNT = 7;
+const BURST_COUNT = 12;
 const PARTICLE_LIFETIME = 700;
+// Радиус кнопки (круг 260px) — частицы стартуют на его границе.
+const BUTTON_RADIUS = 130;
 
 export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -32,15 +35,17 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
   const spawnBurst = useCallback(() => {
     const now = Date.now();
     const next: Particle[] = Array.from({ length: BURST_COUNT }, () => {
-      // Основной вектор — вверх, с лёгким разбросом в стороны.
-      const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.7;
-      const distance = 90 + Math.random() * 120;
+      // Частица расходится из центра по всему периметру,
+      // стартуя на краю кнопки и вылетая за её границу.
+      const angle = (Math.PI * 2 * Math.random()) - Math.PI;
+      const jitter = (Math.random() - 0.5) * 14;
       return {
         id: now + Math.random(),
-        x: Math.cos(angle) * distance,
-        y: Math.sin(angle) * distance - 20,
-        rotation: (Math.random() - 0.5) * 200,
-        scale: 0.7 + Math.random() * 0.8,
+        angle,
+        startRadius: BUTTON_RADIUS + jitter,
+        distance: 50 + Math.random() * 110,
+        rotation: (Math.random() - 0.5) * 260,
+        scale: 0.55 + Math.random() * 0.7,
         delay: Math.random() * 0.05,
       };
     });
@@ -102,17 +107,23 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
         />
       </motion.button>
 
-      {/* Монеты, вылетающие при тапе */}
+      {/* Монеты, вылетающие из периметра кнопки */}
       <AnimatePresence>
         {particles.map((part) => (
           <motion.img
             key={part.id}
             src={coinImg}
             alt=""
-            initial={{ x: 0, y: 0, opacity: 1, scale: 0.3, rotate: 0 }}
+            initial={{
+              x: Math.cos(part.angle) * part.startRadius,
+              y: Math.sin(part.angle) * part.startRadius,
+              opacity: 1,
+              scale: 0.3,
+              rotate: 0,
+            }}
             animate={{
-              x: part.x,
-              y: part.y,
+              x: Math.cos(part.angle) * (part.startRadius + part.distance),
+              y: Math.sin(part.angle) * (part.startRadius + part.distance),
               opacity: 0,
               scale: part.scale,
               rotate: part.rotation,
