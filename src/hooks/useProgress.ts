@@ -24,7 +24,6 @@ export interface UpgradeDef {
   detail: string;
   baseCost: number;
   growth: number;
-  maxLevel: number;
 }
 
 export const UPGRADES: UpgradeDef[] = [
@@ -36,7 +35,6 @@ export const UPGRADES: UpgradeDef[] = [
     detail: '+1 монета за каждый тап',
     baseCost: 500,
     growth: 1.38,
-    maxLevel: 20,
   },
   {
     id: 'energy',
@@ -46,7 +44,6 @@ export const UPGRADES: UpgradeDef[] = [
     detail: '+200 к запасу энергии',
     baseCost: 800,
     growth: 1.38,
-    maxLevel: 25,
   },
   {
     id: 'regen',
@@ -56,7 +53,6 @@ export const UPGRADES: UpgradeDef[] = [
     detail: '+12% к скорости восстановления',
     baseCost: 1200,
     growth: 1.36,
-    maxLevel: 20,
   },
   {
     id: 'passive',
@@ -66,7 +62,6 @@ export const UPGRADES: UpgradeDef[] = [
     detail: '+40 монет в час',
     baseCost: 2000,
     growth: 1.33,
-    maxLevel: 20,
   },
 ];
 
@@ -75,8 +70,17 @@ const getCoinsPerTap = (level: number) => 1 + level;
 const getRegenMs = (level: number) =>
   Math.round(BASE_ENERGY_REGEN_MS / (1 + 0.12 * level));
 const getPassivePerHour = (level: number) => level * 40;
-const getCost = (def: UpgradeDef, level: number) =>
-  Math.round(def.baseCost * Math.pow(def.growth, level));
+// До мягкого капа цена растёт плавно, после — резко дорожает.
+const SOFT_CAP = 10;
+const HARD_GROWTH_FACTOR = 1.55;
+const getCost = (def: UpgradeDef, level: number): number => {
+  if (level < SOFT_CAP) {
+    return Math.round(def.baseCost * Math.pow(def.growth, level));
+  }
+  const capCost = Math.round(def.baseCost * Math.pow(def.growth, SOFT_CAP));
+  const hardGrowth = def.growth * HARD_GROWTH_FACTOR;
+  return Math.round(capCost * Math.pow(hardGrowth, level - SOFT_CAP));
+};
 
 const initialLevels = (): Record<UpgradeId, number> => ({
   damage: 0,
@@ -286,7 +290,6 @@ export const useProgress = () => {
     const def = UPGRADES.find((u) => u.id === id);
     if (!def) return false;
     const current = levelsRef.current[id];
-    if (current >= def.maxLevel) return false;
 
     const cost = getCost(def, current);
     if (stateRef.current.coins < cost) return false;

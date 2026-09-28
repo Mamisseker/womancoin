@@ -57,9 +57,8 @@ export const UpgradesSection: FC<UpgradesSectionProps> = ({
 
       {UPGRADES.map((def) => {
         const level = levels[def.id];
-        const maxed = level >= def.maxLevel;
         const cost = upgradeCost(def.id);
-        const affordable = !maxed && coins >= cost;
+        const affordable = coins >= cost;
 
         return (
           <div
@@ -108,9 +107,10 @@ export const UpgradesSection: FC<UpgradesSectionProps> = ({
                     fontSize: 11,
                     fontWeight: 700,
                     color: 'var(--wc-accent)',
+                    fontVariantNumeric: 'tabular-nums',
                   }}
                 >
-                  {level}/{def.maxLevel}
+                  уро. {level}
                 </span>
               </div>
               <div
@@ -127,19 +127,7 @@ export const UpgradesSection: FC<UpgradesSectionProps> = ({
               </div>
             </div>
 
-            {maxed ? (
-              <div
-                style={{
-                  flexShrink: 0,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: 'var(--wc-text-2)',
-                }}
-              >
-                MAX
-              </div>
-            ) : (
-              <motion.button
+            <motion.button
                 type="button"
                 whileTap={{ scale: 0.93 }}
                 onClick={() => handleBuy(def.id)}
@@ -159,10 +147,9 @@ export const UpgradesSection: FC<UpgradesSectionProps> = ({
               >
                 {cost.toLocaleString('ru-RU')}
               </motion.button>
-            )}
-          </div>
-        );
-      })}
+            </div>
+          );
+        })}
     </div>
   );
 };
