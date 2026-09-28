@@ -1,4 +1,5 @@
 import { hapticFeedback } from '@tma.js/sdk-react';
+import { shareURL } from '@tma.js/sdk';
 import { useCallback, useState, type FC } from 'react';
 
 import demoAvatars from '@/components/FriendsPage/friends-demo-avatars';
@@ -29,6 +30,12 @@ export const FriendsPage: FC<FriendsPageProps> = ({
     } catch {
       hapticFeedback.notificationOccurred('error');
     }
+  }, [referralLink]);
+
+  const shareToFriend = useCallback(() => {
+    if (!referralLink) return;
+    const text = 'Присоединяйся ко мне в WomanCoin 🪙 Жми на ссылку, и мы оба получим бонус!';
+    shareURL(referralLink, text);
   }, [referralLink]);
 
   return (
@@ -165,11 +172,7 @@ export const FriendsPage: FC<FriendsPageProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => {
-                if (referralLink) {
-                  void copyLink();
-                }
-              }}
+              onClick={shareToFriend}
               disabled={!referralLink}
               style={{
                 flex: 1,
@@ -184,7 +187,7 @@ export const FriendsPage: FC<FriendsPageProps> = ({
                 WebkitTapHighlightColor: 'transparent',
               }}
             >
-              {copied ? '✓ Готово' : 'Поделиться'}
+              Пригласить друзей 👥
             </button>
           </div>
         </div>
