@@ -1,5 +1,6 @@
 import { hapticFeedback } from '@tma.js/sdk-react';
 import { shareURL } from '@tma.js/sdk';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useState, type FC } from 'react';
 
 import demoAvatars from '@/components/FriendsPage/friends-demo-avatars';
@@ -19,6 +20,12 @@ export const FriendsPage: FC<FriendsPageProps> = ({
   demoStats,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = useCallback((message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 2000);
+  }, []);
 
   const copyLink = useCallback(async () => {
     if (!referralLink) return;
@@ -26,11 +33,13 @@ export const FriendsPage: FC<FriendsPageProps> = ({
       await navigator.clipboard.writeText(referralLink);
       setCopied(true);
       hapticFeedback.notificationOccurred('success');
+      showToast('Ссылка скопирована ✅');
       setTimeout(() => setCopied(false), 2000);
     } catch {
       hapticFeedback.notificationOccurred('error');
+      showToast('Не получилось скопировать 😔');
     }
-  }, [referralLink]);
+  }, [referralLink, showToast]);
 
   const shareToFriend = useCallback(() => {
     if (!referralLink) return;
@@ -318,6 +327,36 @@ export const FriendsPage: FC<FriendsPageProps> = ({
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 24, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.95 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            style={{
+              position: 'absolute',
+              bottom: 90,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 50,
+              background: 'var(--wc-surface)',
+              border: '1px solid var(--wc-accent)',
+              borderRadius: 16,
+              boxShadow: 'var(--wc-shadow-2)',
+              padding: '12px 20px',
+              fontSize: 14,
+              fontWeight: 700,
+              color: 'var(--wc-text)',
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+            }}
+          >
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
