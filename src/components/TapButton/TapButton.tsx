@@ -72,15 +72,15 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
         whileTap={{ scale: 0.93 }}
         transition={{ type: 'spring', stiffness: 400, damping: 17 }}
         style={{
-          width: 260,
-          height: 260,
-          borderRadius: '50%',
-          border: '2px solid rgba(30,53,87,0.85)',
+          width: 256,
+          height: 256,
+          borderRadius: 16,
+          border: '4px solid rgba(22,41,74,0.9)',
           cursor: disabled ? 'not-allowed' : 'pointer',
           background:
-            'radial-gradient(circle at 35% 30%, #ffffff 0%, #eaf7ff 55%, #d6efff 100%)',
+            'linear-gradient(135deg, #7cf0ff 0%, #ffffff 45%, #b9ecff 100%)',
           boxShadow:
-            '0 2px 0 rgba(30,53,87,0.35), 0 4px 0 rgba(30,53,87,0.2), 0 14px 30px rgba(30,53,87,0.16)',
+            '0 6px 0 rgba(22,41,74,0.28), 0 5px 0 rgba(22,41,74,0.22), 0 16px 24px rgba(22,41,74,0.2)',
           padding: 0,
           display: 'flex',
           alignItems: 'center',
@@ -92,33 +92,33 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
           zIndex: 2,
           overflow: 'hidden',
           opacity: disabled ? 0.4 : 1,
-          filter: disabled ? 'saturate(0.5)' : 'none',
+          filter: disabled ? 'saturate(0.5) contrast(0.9)' : 'none',
+          imageRendering: 'pixelated',
           transition: 'opacity 0.2s ease',
         }}
       >
-        {/* Слой карандашной штриховки поверх бумаги */}
+        {/* Пиксельная сетка поверх кнопки */}
         <div
           aria-hidden
           style={{
             position: 'absolute',
             inset: 0,
-            borderRadius: '50%',
             pointerEvents: 'none',
-            opacity: 0.5,
+            opacity: 0.12,
             backgroundImage:
-              'repeating-linear-gradient(118deg, rgba(30,53,87,0.12) 0px, rgba(30,53,87,0.12) 1px, transparent 1px, transparent 4px), repeating-linear-gradient(62deg, rgba(30,53,87,0.08) 0px, rgba(30,53,87,0.08) 1px, transparent 1px, transparent 5px)',
-            mixBlendMode: 'multiply',
+              'repeating-linear-gradient(0deg, rgba(22,41,74,0.2) 0px, rgba(22,41,74,0.2) 1px, transparent 1px, transparent 4px), repeating-linear-gradient(90deg, rgba(22,41,74,0.2) 0px, rgba(22,41,74,0.2) 1px, transparent 1px, transparent 4px)',
           }}
         />
         <img
           src={coinImg}
           alt="WomanCoin"
           style={{
-            width: '76%',
-            height: '76%',
+            width: '78%',
+            height: '78%',
             objectFit: 'contain',
             pointerEvents: 'none',
             userSelect: 'none',
+            imageRendering: 'pixelated',
           }}
         />
       </motion.button>
@@ -155,6 +155,7 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
               objectFit: 'contain',
               pointerEvents: 'none',
               zIndex: 3,
+              imageRendering: 'pixelated',
               willChange: 'transform, opacity',
             }}
           />

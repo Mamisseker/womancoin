@@ -28,13 +28,26 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Зерно бумаги: лёгкая фактура поверх всего UI — эффект "рисованного" листа */
+/* Пиксельная сетка + аналоговые полосы — 8-бит фактура поверх всего UI */
 body::after {
   content: '';
   position: fixed;
   inset: 0;
   z-index: 9999;
   pointer-events: none;
-  opacity: 0.075;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.16;
+  background-image: repeating-linear-gradient(
+      0deg,
+      rgba(30, 53, 87, 0.14) 0px,
+      rgba(30, 53, 87, 0.14) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(30, 53, 87, 0.14) 0px,
+      rgba(30, 53, 87, 0.14) 1px,
+      transparent 1px,
+      transparent 3px
+    );
 }
