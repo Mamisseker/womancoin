@@ -71,27 +71,28 @@ export const App: FC = () => {
           flexDirection: 'column',
           position: 'relative',
           overflow: 'hidden',
-          background: 'var(--wc-bg)',
+          background:
+            'radial-gradient(120% 90% at 50% -10%, rgba(168,120,255,0.18) 0%, transparent 55%), radial-gradient(100% 80% at 90% 110%, rgba(255,47,214,0.14) 0%, transparent 55%), var(--wc-bg)',
           paddingTop: 'env(safe-area-inset-top)',
           paddingBottom: 130,
           fontFamily:
             '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif',
         }}
       >
-        {/* Лёгкое ambient-свечение за кнопкой */}
+        {/* Неоновое ambient-свечение за кнопкой */}
         <div
           style={{
             position: 'absolute',
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: 420,
-            height: 420,
+            width: 460,
+            height: 460,
             borderRadius: '50%',
             background:
-              'radial-gradient(circle, var(--wc-glow) 0%, transparent 65%)',
+              'radial-gradient(circle, var(--wc-glow) 0%, transparent 68%)',
             pointerEvents: 'none',
-            filter: 'blur(24px)',
+            filter: 'blur(28px)',
           }}
         />
 

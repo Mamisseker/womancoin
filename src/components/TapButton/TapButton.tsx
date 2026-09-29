@@ -77,7 +77,8 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
           borderRadius: '50%',
           border: 0,
           cursor: disabled ? 'not-allowed' : 'pointer',
-          background: 'linear-gradient(145deg, var(--wc-accent), var(--wc-accent-2))',
+          background:
+            'linear-gradient(160deg, rgba(255,255,255,0.18) 0%, transparent 30%), linear-gradient(145deg, var(--wc-accent), var(--wc-accent-2))',
           boxShadow: '0 14px 40px var(--wc-glow), var(--wc-shadow-1)',
           padding: 0,
           display: 'flex',
