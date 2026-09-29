@@ -72,7 +72,7 @@ export const App: FC = () => {
           position: 'relative',
           overflow: 'hidden',
           background:
-            'radial-gradient(120% 90% at 50% -10%, rgba(255,255,255,0.85) 0%, transparent 55%), radial-gradient(100% 80% at 90% 110%, rgba(59,130,246,0.12) 0%, transparent 55%), var(--wc-bg)',
+            'radial-gradient(120% 90% at 50% -10%, rgba(238,246,210,0.7) 0%, transparent 55%), radial-gradient(100% 80% at 90% 110%, rgba(44,94,26,0.12) 0%, transparent 55%), var(--wc-bg)',
           paddingTop: 'env(safe-area-inset-top)',
           paddingBottom: 130,
           fontFamily:

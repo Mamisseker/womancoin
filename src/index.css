@@ -35,18 +35,18 @@ body::after {
   inset: 0;
   z-index: 9999;
   pointer-events: none;
-  opacity: 0.16;
+  opacity: 0.18;
   background-image: repeating-linear-gradient(
       0deg,
-      rgba(30, 53, 87, 0.14) 0px,
-      rgba(30, 53, 87, 0.14) 1px,
+      rgba(16, 42, 20, 0.18) 0px,
+      rgba(16, 42, 20, 0.18) 1px,
       transparent 1px,
       transparent 3px
     ),
     repeating-linear-gradient(
       90deg,
-      rgba(30, 53, 87, 0.14) 0px,
-      rgba(30, 53, 87, 0.14) 1px,
+      rgba(16, 42, 20, 0.18) 0px,
+      rgba(16, 42, 20, 0.18) 1px,
       transparent 1px,
       transparent 3px
     );

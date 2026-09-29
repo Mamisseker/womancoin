@@ -75,12 +75,12 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
           width: 256,
           height: 256,
           borderRadius: 16,
-          border: '4px solid rgba(22,41,74,0.9)',
+          border: '4px solid rgba(16,42,20,0.9)',
           cursor: disabled ? 'not-allowed' : 'pointer',
           background:
-            'linear-gradient(135deg, #7cf0ff 0%, #ffffff 45%, #b9ecff 100%)',
+            'linear-gradient(135deg, #9fd14a 0%, #eef6d2 45%, #c5e878 100%)',
           boxShadow:
-            '0 6px 0 rgba(22,41,74,0.28), 0 5px 0 rgba(22,41,74,0.22), 0 16px 24px rgba(22,41,74,0.2)',
+            '0 6px 0 rgba(16,42,20,0.3), 0 5px 0 rgba(16,42,20,0.24), 0 16px 24px rgba(16,42,20,0.22)',
           padding: 0,
           display: 'flex',
           alignItems: 'center',
@@ -104,9 +104,9 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
             position: 'absolute',
             inset: 0,
             pointerEvents: 'none',
-            opacity: 0.12,
+            opacity: 0.14,
             backgroundImage:
-              'repeating-linear-gradient(0deg, rgba(22,41,74,0.2) 0px, rgba(22,41,74,0.2) 1px, transparent 1px, transparent 4px), repeating-linear-gradient(90deg, rgba(22,41,74,0.2) 0px, rgba(22,41,74,0.2) 1px, transparent 1px, transparent 4px)',
+              'repeating-linear-gradient(0deg, rgba(16,42,20,0.22) 0px, rgba(16,42,20,0.22) 1px, transparent 1px, transparent 4px), repeating-linear-gradient(90deg, rgba(16,42,20,0.22) 0px, rgba(16,42,20,0.22) 1px, transparent 1px, transparent 4px)',
           }}
         />
         <img

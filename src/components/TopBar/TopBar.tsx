@@ -23,15 +23,15 @@ export const TopBar: FC<TopBarProps> = ({ level, progress }) => {
             width: 48,
             height: 48,
             borderRadius: 6,
-            background: 'linear-gradient(135deg, #7cf0ff 0%, #ffffff 45%, #b9ecff 100%)',
-            border: '3px solid rgba(22,41,74,0.9)',
+            background: 'linear-gradient(135deg, #9fd14a 0%, #eef6d2 45%, #c5e878 100%)',
+            border: '3px solid rgba(16,42,20,0.9)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: 18,
             fontWeight: 800,
             color: 'var(--wc-accent)',
-            boxShadow: '0 3px 0 rgba(22,41,74,0.25)',
+            boxShadow: '0 3px 0 rgba(16,42,20,0.25)',
             flexShrink: 0,
           }}
         >
@@ -68,8 +68,8 @@ export const TopBar: FC<TopBarProps> = ({ level, progress }) => {
               height: 8,
               marginTop: 8,
               borderRadius: 0,
-              background: 'rgba(22,41,74,0.12)',
-              border: '1px solid rgba(22,41,74,0.3)',
+              background: 'rgba(16,42,20,0.12)',
+              border: '1px solid rgba(16,42,20,0.32)',
               overflow: 'hidden',
             }}
           >

@@ -68,10 +68,10 @@ export const UpgradesSection: FC<UpgradesSectionProps> = ({
               alignItems: 'center',
               gap: 12,
               background: 'var(--wc-surface)',
-              border: '2px solid rgba(22,41,74,0.3)',
+              border: '2px solid rgba(16,42,20,0.32)',
               borderRadius: 8,
               padding: '12px 14px',
-              boxShadow: '0 3px 0 rgba(22,41,74,0.12)',
+              boxShadow: '0 3px 0 rgba(16,42,20,0.12)',
             }}
           >
             <div
@@ -133,16 +133,16 @@ export const UpgradesSection: FC<UpgradesSectionProps> = ({
                 onClick={() => handleBuy(def.id)}
                 style={{
                   flexShrink: 0,
-                  border: '2px solid rgba(22,41,74,0.8)',
+                  border: '2px solid rgba(16,42,20,0.8)',
                   borderRadius: 6,
                   padding: '8px 12px',
                   fontSize: 13,
                   fontWeight: 800,
                   cursor: affordable ? 'pointer' : 'not-allowed',
-                  background: affordable ? '#ffffff' : 'var(--wc-surface-2)',
+                  background: affordable ? '#dff0b0' : 'var(--wc-surface-2)',
                   color: affordable ? 'var(--wc-accent)' : 'var(--wc-text-3)',
                   fontVariantNumeric: 'tabular-nums',
-                  boxShadow: '0 3px 0 rgba(22,41,74,0.18)',
+                  boxShadow: '0 3px 0 rgba(16,42,20,0.18)',
                   WebkitTapHighlightColor: 'transparent',
                 }}
               >
