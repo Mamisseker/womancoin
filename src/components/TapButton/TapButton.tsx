@@ -75,11 +75,11 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
           width: 260,
           height: 260,
           borderRadius: '50%',
-          border: 0,
+          border: '5px solid var(--wc-accent-2)',
           cursor: disabled ? 'not-allowed' : 'pointer',
           background:
-            'linear-gradient(160deg, rgba(255,255,255,0.18) 0%, transparent 30%), linear-gradient(145deg, var(--wc-accent), var(--wc-accent-2))',
-          boxShadow: '0 14px 40px var(--wc-glow), var(--wc-shadow-1)',
+            'radial-gradient(circle at 35% 30%, #ffffff 0%, #eaf7ff 55%, #d6efff 100%)',
+          boxShadow: '0 6px 0 rgba(30,53,87,0.18), 0 14px 30px rgba(30,53,87,0.16)',
           padding: 0,
           display: 'flex',
           alignItems: 'center',
@@ -99,8 +99,8 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
           src={coinImg}
           alt="WomanCoin"
           style={{
-            width: '82%',
-            height: '82%',
+            width: '76%',
+            height: '76%',
             objectFit: 'contain',
             pointerEvents: 'none',
             userSelect: 'none',

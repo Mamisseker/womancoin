@@ -20,16 +20,17 @@ export const TopBar: FC<TopBarProps> = ({ level, progress }) => {
         {/* Бейдж уровня */}
         <div
           style={{
-            width: 44,
-            height: 44,
+            width: 46,
+            height: 46,
             borderRadius: 14,
-            background: 'linear-gradient(145deg, var(--wc-accent), var(--wc-accent-2))',
+            background: 'radial-gradient(circle at 35% 30%, #ffffff 0%, #eaf7ff 55%, #d6efff 100%)',
+            border: '3px solid var(--wc-accent-2)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: 18,
             fontWeight: 800,
-            color: 'var(--wc-accent-text)',
+            color: 'var(--wc-accent)',
             boxShadow: 'var(--wc-shadow-1)',
             flexShrink: 0,
           }}
