@@ -114,7 +114,7 @@ export const BottomNav: FC<BottomNavProps> = ({ active, onChange }) => {
                 alignItems: 'center',
                 gap: 3,
                 flex: 1,
-                border: isActive ? '2px solid var(--wc-accent-2)' : '2px solid transparent',
+                border: isActive ? '2px solid rgba(30,53,87,0.75)' : '2px solid transparent',
                 borderRadius: 20,
                 padding: '7px 4px',
                 cursor: 'pointer',

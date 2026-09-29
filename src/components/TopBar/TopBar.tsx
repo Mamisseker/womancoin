@@ -24,15 +24,16 @@ export const TopBar: FC<TopBarProps> = ({ level, progress }) => {
             height: 46,
             borderRadius: 14,
             background: 'radial-gradient(circle at 35% 30%, #ffffff 0%, #eaf7ff 55%, #d6efff 100%)',
-            border: '3px solid var(--wc-accent-2)',
+            border: '2px solid rgba(30,53,87,0.85)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 18,
+            fontSize: 17,
             fontWeight: 800,
             color: 'var(--wc-accent)',
-            boxShadow: 'var(--wc-shadow-1)',
+            boxShadow: '0 2px 0 rgba(30,53,87,0.28), var(--wc-shadow-1)',
             flexShrink: 0,
+            transform: 'rotate(-2deg)',
           }}
         >
           {level}

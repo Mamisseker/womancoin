@@ -75,11 +75,12 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
           width: 260,
           height: 260,
           borderRadius: '50%',
-          border: '5px solid var(--wc-accent-2)',
+          border: '2px solid rgba(30,53,87,0.85)',
           cursor: disabled ? 'not-allowed' : 'pointer',
           background:
             'radial-gradient(circle at 35% 30%, #ffffff 0%, #eaf7ff 55%, #d6efff 100%)',
-          boxShadow: '0 6px 0 rgba(30,53,87,0.18), 0 14px 30px rgba(30,53,87,0.16)',
+          boxShadow:
+            '0 2px 0 rgba(30,53,87,0.35), 0 4px 0 rgba(30,53,87,0.2), 0 14px 30px rgba(30,53,87,0.16)',
           padding: 0,
           display: 'flex',
           alignItems: 'center',
@@ -95,6 +96,20 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
           transition: 'opacity 0.2s ease',
         }}
       >
+        {/* Слой карандашной штриховки поверх бумаги */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: '50%',
+            pointerEvents: 'none',
+            opacity: 0.5,
+            backgroundImage:
+              'repeating-linear-gradient(118deg, rgba(30,53,87,0.12) 0px, rgba(30,53,87,0.12) 1px, transparent 1px, transparent 4px), repeating-linear-gradient(62deg, rgba(30,53,87,0.08) 0px, rgba(30,53,87,0.08) 1px, transparent 1px, transparent 5px)',
+            mixBlendMode: 'multiply',
+          }}
+        />
         <img
           src={coinImg}
           alt="WomanCoin"
