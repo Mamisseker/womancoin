@@ -32,6 +32,8 @@ export interface ProgressState {
   e: number;
   /** Уровни прокачек. */
   l: Record<UpgradeId, number>;
+  /** Общее число тапов за всё время (для шкалы активности). */
+  t: number;
   /** Unix-время последнего применения оффлайн-начислений (мс). */
   u: number;
   /** Версия формата. */
@@ -96,6 +98,9 @@ export const sanitizeState = (raw: unknown): ProgressState | null => {
   const lvl = (id: UpgradeId): number => Math.max(0, num(srcLevels[id]) ?? 0);
 
   return {
+    // Баланс хранится целым числом микро-единиц, поэтому Math.floor
+    // здесь не теряет дробные токены, а лишь отсекает мусор из
+    // подделанных значений.
     c: Math.max(0, c),
     e: Math.max(0, e),
     l: {
@@ -104,6 +109,7 @@ export const sanitizeState = (raw: unknown): ProgressState | null => {
       regen: lvl('regen'),
       passive: lvl('passive'),
     },
+    t: Math.max(0, num(obj.t) ?? 0),
     u,
     v: 2,
   };
@@ -162,6 +168,7 @@ const readLegacyState = async (): Promise<ProgressState | null> => {
     c: Math.max(0, Math.floor(coins ?? 0)),
     e: Math.max(0, Math.floor(energy ?? 0)),
     l: levels,
+    t: 0,
     u: updated ?? Date.now(),
     v: 2,
   };

@@ -15,13 +15,15 @@ import { useGender } from '@/hooks/useGender.ts';
 import { useProgress } from '@/hooks/useProgress.ts';
 import { useReferral } from '@/hooks/useReferral.ts';
 import { getLevelInfo } from '@/lib/levels.ts';
+import { formatTapGain, formatTokens } from '@/lib/units.ts';
+import { TapBar } from '@/components/TapBar/TapBar.tsx';
 
 const ENERGY_PER_TAP = 1;
 
 export const App: FC = () => {
   
 
-  const { coins, energy, tap, addCoins, levels, coinsPerTap, maxEnergy, upgradeCost, buyUpgrade } =
+  const { coins, energy, taps, tap, addCoins, levels, coinsPerTap, maxEnergy, upgradeCost, buyUpgrade } =
     useProgress();
   const { gender, setGender, ready } = useGender();
   const { referralLink, invitedBy, bonus, claimBonus, usingTelegram, demoStats } =
@@ -126,26 +128,15 @@ export const App: FC = () => {
             >
               <div
                 style={{
-                  fontSize: 56,
+                  fontSize: 30,
                   fontWeight: 700,
                   lineHeight: 1,
                   color: 'var(--wc-text)',
-                  letterSpacing: -1.5,
+                  letterSpacing: -0.6,
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >
-                {coins.toLocaleString('ru-RU')}
-              </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: 'var(--wc-text-2)',
-                  letterSpacing: 3,
-                  textTransform: 'uppercase',
-                }}
-              >
-                Woman Coins
+                {formatTokens(coins)}
               </div>
             </div>
 
@@ -176,18 +167,29 @@ export const App: FC = () => {
                   color: 'var(--wc-text-3)',
                 }}
               >
-                · +{coinsPerTap}/тап
+                · {formatTapGain(coinsPerTap)}
               </span>
             </div>
 
             <TapButton gender={gender} onTap={handleTap} disabled={energy < ENERGY_PER_TAP} />
 
-            <UpgradesSection
-              coins={coins}
-              levels={levels}
-              upgradeCost={upgradeCost}
-              buyUpgrade={buyUpgrade}
-            />
+            <div
+              style={{
+                alignSelf: 'stretch',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 14,
+              }}
+            >
+              <TapBar taps={taps} />
+
+              <UpgradesSection
+                coins={coins}
+                levels={levels}
+                upgradeCost={upgradeCost}
+                buyUpgrade={buyUpgrade}
+              />
+            </div>
           </div>
         )}
 

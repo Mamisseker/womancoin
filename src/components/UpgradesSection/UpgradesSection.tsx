@@ -6,6 +6,7 @@ import {
   UPGRADES,
   type UpgradeId,
 } from '@/hooks/useProgress.ts';
+import { formatTokens } from '@/lib/units.ts';
 
 interface UpgradesSectionProps {
   coins: number;
@@ -146,7 +147,7 @@ export const UpgradesSection: FC<UpgradesSectionProps> = ({
                   WebkitTapHighlightColor: 'transparent',
                 }}
               >
-                {cost.toLocaleString('ru-RU')}
+                {formatTokens(cost)}
               </motion.button>
             </div>
           );

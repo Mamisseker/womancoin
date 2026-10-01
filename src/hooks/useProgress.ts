@@ -6,6 +6,7 @@ import {
   syncMirrorToCloud,
   type ProgressState,
 } from '@/lib/progressStorage.ts';
+import { MICRO_PER_TAP } from '@/lib/units.ts';
 
 const BASE_MAX_ENERGY = 1000;
 // Базовая скорость регена: 1 энергия за 5 секунд (без прокачки).
@@ -58,17 +59,24 @@ export const UPGRADES: UpgradeDef[] = [
     key: 'wc_up_passive',
     icon: '💰',
     title: 'Пассивный доход',
-    detail: '+40 монет в час',
+    detail: '+60 микро-единиц в час',
     baseCost: 2000,
     growth: 1.33,
   },
 ];
 
 const getMaxEnergy = (level: number) => BASE_MAX_ENERGY + level * 200;
-const getCoinsPerTap = (level: number) => 1 + level;
+// Прирост за тап в микро-единицах: базово 1 (0.000001 токена),
+// каждый уровень урона добавляет ещё одну микро-единицу.
+const getCoinsPerTap = (level: number) => MICRO_PER_TAP + level;
 const getRegenMs = (level: number) =>
   Math.round(BASE_ENERGY_REGEN_MS / (1 + 0.12 * level));
-const getPassivePerHour = (level: number) => level * 40;
+// Пассивный доход задаётся в микро-единицах в час.
+// Важно: базовое значение — 60 микро/час (60 тапов в час), а не 40 токен.
+// Умножение на MICRO здесь сломало бы игру: 40 токен/час равны 40 миллионам
+// микро-единиц, то есть 40 миллионам тапов — пассивка перекрывала бы игру.
+const PASSIVE_PER_LEVEL_PER_HOUR = 60;
+const getPassivePerHour = (level: number) => level * PASSIVE_PER_LEVEL_PER_HOUR;
 // До мягкого капа цена растёт плавно, после — резко дорожает.
 const SOFT_CAP = 10;
 const HARD_GROWTH_FACTOR = 1.55;
@@ -97,11 +105,15 @@ export const useProgress = () => {
   const [coins, setCoins] = useState(0);
   const [energy, setEnergy] = useState(BASE_MAX_ENERGY);
   const [levels, setLevels] = useState<Record<UpgradeId, number>>(initialLevels);
+  // Общее число тапов за всё время — для шкалы активности.
+  const [taps, setTaps] = useState(0);
   const loaded = useRef(false);
   const saveTimer = useRef<number | null>(null);
   // Актуальные значения для мгновенной записи при сворачивании/закрытии.
   const stateRef = useRef({ coins: 0, energy: BASE_MAX_ENERGY, levels: initialLevels() });
   stateRef.current = { coins, energy, levels };
+  const tapsRef = useRef(taps);
+  tapsRef.current = taps;
   const levelsRef = useRef(levels);
   levelsRef.current = levels;
 
@@ -131,6 +143,7 @@ export const useProgress = () => {
             c: 0,
             e: BASE_MAX_ENERGY,
             l: initialLevels(),
+            t: 0,
             u: Date.now(),
             v: 2,
           };
@@ -142,6 +155,7 @@ export const useProgress = () => {
         }
 
         setLevels(saved.l);
+        setTaps(saved.t ?? 0);
 
         const max = getMaxEnergy(saved.l.energy);
         const elapsed = Math.max(0, Date.now() - saved.u);
@@ -166,6 +180,7 @@ export const useProgress = () => {
           c: nextCoins,
           e: Math.min(max, restored),
           l: saved.l,
+          t: saved.t ?? 0,
           u: Date.now(),
           v: 2,
         });
@@ -216,6 +231,7 @@ export const useProgress = () => {
       c,
       e,
       l,
+      t: tapsRef.current,
       u: Date.now(),
       v: 2,
     };
@@ -268,11 +284,12 @@ export const useProgress = () => {
     if (loaded.current) {
       save();
     }
-  }, [coins, energy, levels, save]);
+  }, [coins, energy, levels, taps, save]);
 
   const tap = useCallback(() => {
     setCoins((c) => c + getCoinsPerTap(levelsRef.current.damage));
     setEnergy((e) => Math.max(0, e - 1));
+    setTaps((t) => t + 1);
   }, []);
 
   const addCoins = useCallback((amount: number) => {
@@ -300,6 +317,7 @@ export const useProgress = () => {
       c: nextCoins,
       e: stateRef.current.energy,
       l: next,
+      t: tapsRef.current,
       u: Date.now(),
       v: 2,
     });
@@ -309,6 +327,7 @@ export const useProgress = () => {
   return {
     coins,
     energy,
+    taps,
     tap,
     addCoins,
     levels,
