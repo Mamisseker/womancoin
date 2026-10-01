@@ -1,13 +1,12 @@
-import { cloudStorage } from '@tma.js/sdk-react';
 import { useCallback, useLayoutEffect, useEffect, useRef, useState } from 'react';
 
-import { decrypt, encrypt } from '@/lib/storageCodec.ts';
+import {
+  loadProgress,
+  saveProgress,
+  syncMirrorToCloud,
+  type ProgressState,
+} from '@/lib/progressStorage.ts';
 
-const COINS_KEY = 'wc_coins';
-const ENERGY_KEY = 'wc_energy';
-const UPDATED_KEY = 'wc_updated';
-// Маркер разового сброса экономики (замена старых дешёвых уровней).
-const RESET_KEY = 'wc_reset_v2';
 const BASE_MAX_ENERGY = 1000;
 // Базовая скорость регена: 1 энергия за 5 секунд (без прокачки).
 const BASE_ENERGY_REGEN_MS = 5000;
@@ -122,80 +121,54 @@ export const useProgress = () => {
 
     void (async () => {
       try {
-        const keys = [
-          COINS_KEY,
-          ENERGY_KEY,
-          UPDATED_KEY,
-          RESET_KEY,
-          ...UPGRADES.map((u) => u.key),
-        ];
-        const items = await cloudStorage.getItems(keys);
+        const saved: ProgressState | null = await loadProgress();
         if (cancelled) return;
 
-        // Разовый сброс прогресса из-за переработанной экономики прокачки:
-        // старые «дешёвые» уровни не стыкуются с новыми ценами.
-        if (!items[RESET_KEY]) {
-          void cloudStorage.setItem(RESET_KEY, encrypt('1'));
-          for (const def of UPGRADES) {
-            void cloudStorage.setItem(def.key, encrypt('0'));
-          }
-          void cloudStorage.setItem(COINS_KEY, encrypt('0'));
-          void cloudStorage.setItem(UPDATED_KEY, encrypt(String(Date.now())));
-          setLevels(initialLevels());
+        if (!saved) {
+          // Первый запуск (или прогресс не найден): стартуем с нуля
+          // и сразу фиксируем это в хранилище.
+          const fresh: ProgressState = {
+            c: 0,
+            e: BASE_MAX_ENERGY,
+            l: initialLevels(),
+            u: Date.now(),
+            v: 2,
+          };
+          setLevels(fresh.l);
           setCoins(0);
           setEnergy(BASE_MAX_ENERGY);
+          void saveProgress(fresh);
           return;
         }
 
-        // Чтение числа из CloudStorage: значение может быть либо зашифрованным
-        // (новый формат с префиксом v1:), либо устаревшим plaintext-числом.
-        // Невалидные/взломанные значения трактуются как «нет данных».
-        const readNumber = (key: string): number | null => {
-          const raw = items[key];
-          if (!raw) return null;
-          const num = raw.startsWith('v1:') ? decrypt(raw) : raw;
-          if (num === null || !Number.isFinite(Number(num))) return null;
-          return Number(num);
-        };
+        setLevels(saved.l);
 
-        const readLevel = (key: string): number => {
-          const v = readNumber(key);
-          return v === null ? 0 : Math.max(0, Math.floor(v));
-        };
-        const nextLevels = {
-          damage: readLevel('wc_up_damage'),
-          energy: readLevel('wc_up_energy'),
-          regen: readLevel('wc_up_regen'),
-          passive: readLevel('wc_up_passive'),
-        };
-        setLevels(nextLevels);
-
-        const max = getMaxEnergy(nextLevels.energy);
-        const coinsRaw = readNumber(COINS_KEY);
-        const updatedRaw = readNumber(UPDATED_KEY);
-        const updatedVal = updatedRaw ?? Date.now();
-
-        let nextCoins = coinsRaw === null ? 0 : Math.floor(coinsRaw);
+        const max = getMaxEnergy(saved.l.energy);
+        const elapsed = Math.max(0, Date.now() - saved.u);
 
         // Пассивный доход за время, пока приложение было закрыто.
-        const hours = Math.max(0, (Date.now() - updatedVal) / 3_600_000);
-        nextCoins += Math.floor(getPassivePerHour(nextLevels.passive) * hours);
-
+        const hours = elapsed / 3_600_000;
+        const nextCoins = saved.c + Math.floor(getPassivePerHour(saved.l.passive) * hours);
         setCoins(nextCoins);
 
         // Энергия восстанавливается по времени: к сохранённому значению
         // добавляется реген за секунды, прошедшие с последнего сейва.
         // (Скорость медленная — 1 энергия за 5с без прокачки.)
-        const energyRaw = readNumber(ENERGY_KEY);
-        if (energyRaw !== null) {
-          const regen = getRegenMs(nextLevels.regen);
-          const elapsed = Math.max(0, Date.now() - updatedVal);
-          const regenerated = Math.floor(elapsed / regen);
-          const restored = Math.max(0, Math.floor(energyRaw)) + regenerated;
-          setEnergy(Math.min(max, restored));
-        } else {
-          setEnergy(max);
-        }
+        const regen = getRegenMs(saved.l.regen);
+        const restored = saved.e + Math.floor(elapsed / regen);
+        setEnergy(Math.min(max, restored));
+
+        // Фиксируем момент применения оффлайн-начислений: отметка `u`
+        // теперь соответствует состоянию, которое уже отдано игроку.
+        // Без этого закрытие сразу после открытия привело бы к повторному
+        // начислению оффлайн-дохода и энергии при следующем запуске.
+        void saveProgress({
+          c: nextCoins,
+          e: Math.min(max, restored),
+          l: saved.l,
+          u: Date.now(),
+          v: 2,
+        });
       } catch {
         // CloudStorage недоступен (например, вне Telegram) — работаем без сохранения.
       } finally {
@@ -204,6 +177,10 @@ export const useProgress = () => {
         }
       }
     })();
+
+    // Доливаем в облако состояние, если прошлый запуск успел записать
+    // его только локально (облако было недоступно в момент закрытия).
+    void syncMirrorToCloud();
 
     return () => {
       cancelled = true;
@@ -230,43 +207,59 @@ export const useProgress = () => {
     return () => window.clearInterval(id);
   }, []);
 
-  // Мгновенная запись прогресса в CloudStorage (используется при закрытии).
-  // Все значения шифруются (см. lib/storageCodec.ts).
+  // Запись прогресса одним атомарным ключом (см. lib/progressStorage.ts).
+  // Сначала синхронно в localStorage, затем в CloudStorage — так состояние
+  // переживает закрытие WebView, даже если облачный запрос не успел уйти.
   const write = useCallback(() => {
     const { coins: c, energy: e, levels: l } = stateRef.current;
-    void cloudStorage.setItem(COINS_KEY, encrypt(String(c)));
-    void cloudStorage.setItem(ENERGY_KEY, encrypt(String(e)));
-    void cloudStorage.setItem(UPDATED_KEY, encrypt(String(Date.now())));
-    for (const def of UPGRADES) {
-      void cloudStorage.setItem(def.key, encrypt(String(l[def.id])));
-    }
+    const snapshot: ProgressState = {
+      c,
+      e,
+      l,
+      u: Date.now(),
+      v: 2,
+    };
+    stateRef.current = { coins: c, energy: e, levels: l };
+    return saveProgress(snapshot);
   }, []);
 
-  // Сохранение прогресса в CloudStorage с небольшим дебаунсом на тапы,
-  // чтобы не писать хранилище на каждый тап.
+  // Сохранение прогресса с небольшим дебаунсом на тапы, чтобы не писать
+  // хранилище на каждый тап. Запись идёт в localStorage синхронно, поэтому
+  // даже если облачный запрос не успеет, состояние переживёт перезагрузку.
   const save = useCallback(() => {
     if (saveTimer.current) {
       window.clearTimeout(saveTimer.current);
     }
-    saveTimer.current = window.setTimeout(write, 400);
+    saveTimer.current = window.setTimeout(() => {
+      saveTimer.current = null;
+      void write();
+    }, 400);
   }, [write]);
 
   // Гарантированный сброс при сворачивании/закрытии/обновлении страницы:
   // setTimeout в WebView Telegram не выполняется, если приложение свернули,
   // поэтому «всё скатывается обратно» — записываем значения сразу.
+  // Отменяем и отложенный таймер, иначе он потом перезапишет снимок,
+  // сделанный в момент закрытия, данными, которые к тому моменту устарели.
   useEffect(() => {
     const flush = () => {
-      if (loaded.current) write();
+      if (!loaded.current) return;
+      if (saveTimer.current) {
+        window.clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
+      void write();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
     };
     window.addEventListener('pagehide', flush);
     window.addEventListener('beforeunload', flush);
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') flush();
-    });
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
       window.removeEventListener('pagehide', flush);
       window.removeEventListener('beforeunload', flush);
-      document.removeEventListener('visibilitychange', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [write]);
 
@@ -298,9 +291,18 @@ export const useProgress = () => {
     const nextCoins = stateRef.current.coins - cost;
     setCoins(nextCoins);
     setLevels(next);
-    void cloudStorage.setItem(def.key, encrypt(String(current + 1)));
-    void cloudStorage.setItem(COINS_KEY, encrypt(String(nextCoins)));
-    void cloudStorage.setItem(UPDATED_KEY, encrypt(String(Date.now())));
+
+    // Покупка сохраняется сразу и целиком: раньше уровень, монеты и
+    // отметка времени писались тремя отдельными запросами, и обрыв любого
+    // из них на закрытии оставлял прокачку «наполовину» — визуально откат.
+    stateRef.current = { coins: nextCoins, energy: stateRef.current.energy, levels: next };
+    void saveProgress({
+      c: nextCoins,
+      e: stateRef.current.energy,
+      l: next,
+      u: Date.now(),
+      v: 2,
+    });
     return true;
   }, []);
 
