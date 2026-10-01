@@ -1,6 +1,6 @@
 import { AppRoot } from '@telegram-apps/telegram-ui';
 import { hapticFeedback } from '@tma.js/sdk-react';
-import { useEffect, useState, type FC } from 'react';
+import { useCallback, useEffect, useState, type FC } from 'react';
 
 import { BottomNav } from '@/components/BottomNav/BottomNav.tsx';
 import { FactoryPage } from '@/components/FactoryPage/FactoryPage.tsx';
@@ -9,22 +9,26 @@ import { GenderSelect } from '@/components/GenderSelect/GenderSelect.tsx';
 import { StatsPage } from '@/components/StatsPage/StatsPage.tsx';
 import { TapButton } from '@/components/TapButton/TapButton.tsx';
 import { TopBar } from '@/components/TopBar/TopBar.tsx';
-import { UpgradesSection } from '@/components/UpgradesSection/UpgradesSection.tsx';
+
 import { WalletPage } from '@/components/WalletPage/WalletPage.tsx';
 import { useGender } from '@/hooks/useGender.ts';
 import { useProgress } from '@/hooks/useProgress.ts';
 import { useReferral } from '@/hooks/useReferral.ts';
 import { getLevelInfo } from '@/lib/levels.ts';
 import { formatTapGain, formatTokens } from '@/lib/units.ts';
+import { BoostsPanel } from '@/components/BoostsPanel/BoostsPanel.tsx';
+import type { BoostId } from '@/lib/boosts.ts';
+import { useBoosts } from '@/hooks/useBoosts.ts';
 
 const ENERGY_PER_TAP = 1;
 
 export const App: FC = () => {
   
 
-  const { coins, energy, tap, addCoins, levels, coinsPerTap, maxEnergy, upgradeCost, buyUpgrade } =
-    useProgress();
   const { gender, setGender, ready } = useGender();
+  const { states: boostStates, now: boostNow, activate, isActive } = useBoosts();
+  const { coins, energy, tap, addCoins, levels, coinsPerTap, maxEnergy, upgradeCost, buyUpgrade, claimJackpot } =
+    useProgress({ turboTap: isActive('turboTap'), regen: isActive('regen') });
   const { referralLink, invitedBy, bonus, claimBonus, usingTelegram, demoStats } =
     useReferral();
   const [tab, setTab] = useState('tap');
@@ -43,6 +47,12 @@ export const App: FC = () => {
       }
     }
   }, [bonus, claimBonus, addCoins]);
+
+  const handleActivateBoost = useCallback((id: BoostId) => {
+    activate(id);
+    // «Бонус» выплачивается сразу, остальные влияют через множители.
+    if (id === 'jackpot') claimJackpot();
+  }, [activate, claimJackpot]);
 
   const handleTap = () => {
     if (energy < ENERGY_PER_TAP) return;
@@ -170,55 +180,75 @@ export const App: FC = () => {
               </div>
             </div>
 
-            <TapButton gender={gender} onTap={handleTap} disabled={energy < ENERGY_PER_TAP} />
-
-            {/* Баланс — под монетой */}
+            {/* Монета с бустами справа; баланс остаётся под монетой,
+                поэтому левая колонка шириной ровно в кнопку. */}
             <div
               style={{
                 display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 4,
-                marginTop: -18,
+                alignItems: 'flex-start',
+                justifyContent: 'center',
+                gap: 14,
+                alignSelf: 'stretch',
                 flexShrink: 0,
               }}
             >
               <div
                 style={{
-                  fontSize: 34,
-                  fontWeight: 700,
-                  lineHeight: 1,
-                  color: 'var(--wc-text)',
-                  letterSpacing: -0.8,
-                  fontVariantNumeric: 'tabular-nums',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 6,
+                  flexShrink: 0,
                 }}
               >
-                {formatTokens(coins)}
+                <TapButton
+                  gender={gender}
+                  onTap={handleTap}
+                  disabled={energy < ENERGY_PER_TAP}
+                />
+
+                <div
+                  style={{
+                    fontSize: 34,
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    color: 'var(--wc-text)',
+                    letterSpacing: -0.8,
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {formatTokens(coins)}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: 'var(--wc-text-3)',
+                    letterSpacing: 2,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Woman Coins
+                </div>
               </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: 'var(--wc-text-3)',
-                  letterSpacing: 2,
-                  textTransform: 'uppercase',
-                }}
-              >
-                Woman Coins
-              </div>
+
+              <BoostsPanel
+                states={boostStates}
+                now={boostNow}
+                onActivate={handleActivateBoost}
+              />
             </div>
 
-            <UpgradesSection
-              coins={coins}
-              levels={levels}
-              upgradeCost={upgradeCost}
-              buyUpgrade={buyUpgrade}
-            />
           </div>
         )}
 
         {tab === 'stats' && (
-          <StatsPage />
+          <StatsPage
+            coins={coins}
+            levels={levels}
+            upgradeCost={upgradeCost}
+            buyUpgrade={buyUpgrade}
+          />
         )}
 
         {tab === 'boost' && (

@@ -1,13 +1,24 @@
 import type { FC } from 'react';
 
 import { GenderBar } from '@/components/GenderBar/GenderBar.tsx';
+import { UpgradesSection } from '@/components/UpgradesSection/UpgradesSection.tsx';
+import type { UpgradeId } from '@/hooks/useProgress.ts';
+
+interface StatsPageProps {
+  coins: number;
+  levels: Record<UpgradeId, number>;
+  upgradeCost: (id: UpgradeId) => number;
+  buyUpgrade: (id: UpgradeId) => boolean;
+}
 
 /**
- * Страница «Статистика»: процентное соотношение мужчин и женщин
- * по всей аудитории. Источник — демо-заглушка (useGenderStats),
- * позже подключится реальный сервер.
+ * Страница «Статистика»: соотношение мужчин и женщин по аудитории
+ * (демо-источник, позже реальный сервер) и прокачки игрока.
+ *
+ * Прокачки переехали сюда с вкладки «Тап», где место заняли бусты:
+ * монет на тап всё равно тратится только здесь.
  */
-export const StatsPage: FC = () => {
+export const StatsPage: FC<StatsPageProps> = ({ coins, levels, upgradeCost, buyUpgrade }) => {
   return (
     <div
       style={{
@@ -53,11 +64,27 @@ export const StatsPage: FC = () => {
             lineHeight: 1.45,
           }}
         >
-          Соотношение мужчин и женщин среди всех игроков
+          Усиления и статистика аудитории
         </div>
       </div>
 
-      <GenderBar />
+      <div
+        style={{
+          alignSelf: 'stretch',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 24,
+        }}
+      >
+        <UpgradesSection
+          coins={coins}
+          levels={levels}
+          upgradeCost={upgradeCost}
+          buyUpgrade={buyUpgrade}
+        />
+
+        <GenderBar />
+      </div>
     </div>
   );
 };

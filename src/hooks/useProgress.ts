@@ -7,6 +7,7 @@ import {
   type ProgressState,
 } from '@/lib/progressStorage.ts';
 import { MICRO_PER_TAP } from '@/lib/units.ts';
+import { JACKPOT_MICRO, REGEN_MULTIPLIER, TURBO_TAP_MULTIPLIER } from '@/lib/boosts.ts';
 
 const BASE_MAX_ENERGY = 1000;
 // Базовая скорость регена: 1 энергия за 5 секунд (без прокачки).
@@ -101,7 +102,7 @@ const initialLevels = (): Record<UpgradeId, number> => ({
  * Монеты, энергия и уровни скиллов сохраняются на серверах Telegram,
  * поэтому прогресс не сбрасывается между сессиями.
  */
-export const useProgress = () => {
+export const useProgress = (boosts?: { turboTap: boolean; regen: boolean }) => {
   const [coins, setCoins] = useState(0);
   const [energy, setEnergy] = useState(BASE_MAX_ENERGY);
   const [levels, setLevels] = useState<Record<UpgradeId, number>>(initialLevels);
@@ -117,10 +118,21 @@ export const useProgress = () => {
   const levelsRef = useRef(levels);
   levelsRef.current = levels;
 
+  // Бусты удваивают-ускоряют экономику, но не трогают уровни прокачек:
+  // стоимость прокачек остаётся прежней, иначе буст «съедал» бы смысл прокачки.
+  const turboTap = boosts?.turboTap ?? false;
+  const regenBoost = boosts?.regen ?? false;
+
   // Производные значения прокачек.
-  const coinsPerTap = getCoinsPerTap(levels.damage);
+  const baseCoinsPerTap = getCoinsPerTap(levels.damage);
+  const coinsPerTap = turboTap ? baseCoinsPerTap * TURBO_TAP_MULTIPLIER : baseCoinsPerTap;
   const maxEnergy = getMaxEnergy(levels.energy);
   const regenMs = getRegenMs(levels.regen);
+  // Ускоренный реген тикает чаще: интервал делим на множитель,
+  // а в useEffect ниже за один тик добавляется 1 единица.
+  const regenIntervalMs = regenBoost
+    ? Math.max(200, Math.round(regenMs / REGEN_MULTIPLIER))
+    : regenMs;
   const passivePerHour = getPassivePerHour(levels.passive);
   const upgradeCost = (id: UpgradeId): number => {
     const def = UPGRADES.find((u) => u.id === id);
@@ -206,9 +218,9 @@ export const useProgress = () => {
   useEffect(() => {
     const id = window.setInterval(() => {
       setEnergy((e) => Math.min(getMaxEnergy(levelsRef.current.energy), e + 1));
-    }, regenMs);
+    }, regenIntervalMs);
     return () => window.clearInterval(id);
-  }, [regenMs]);
+  }, [regenIntervalMs]);
 
   // Пассивный доход в реальном времени (минута за минутой).
   useEffect(() => {
@@ -287,9 +299,21 @@ export const useProgress = () => {
   }, [coins, energy, levels, taps, save]);
 
   const tap = useCallback(() => {
-    setCoins((c) => c + getCoinsPerTap(levelsRef.current.damage));
+    const base = getCoinsPerTap(levelsRef.current.damage);
+    setCoins((c) => c + (turboTapRef.current ? base * TURBO_TAP_MULTIPLIER : base));
     setEnergy((e) => Math.max(0, e - 1));
     setTaps((t) => t + 1);
+  }, []);
+
+  // Отдельные ref'ы: колбэк тапа не должен пересоздаваться каждый тик буста.
+  const turboTapRef = useRef(turboTap);
+  turboTapRef.current = turboTap;
+
+  /** Разово выдать выплату буста и показать, что сработало. */
+  const claimJackpot = useCallback((): number => {
+    stateRef.current = { ...stateRef.current, coins: stateRef.current.coins + JACKPOT_MICRO };
+    setCoins((c) => c + JACKPOT_MICRO);
+    return JACKPOT_MICRO;
   }, []);
 
   const addCoins = useCallback((amount: number) => {
@@ -329,6 +353,7 @@ export const useProgress = () => {
     energy,
     taps,
     tap,
+    claimJackpot,
     addCoins,
     levels,
     maxEnergy,
