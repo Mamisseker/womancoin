@@ -1,27 +1,29 @@
 /**
- * Бусты: временные усиления с кулдауном.
+ * Панель бустов: три круглые кнопки справа от монеты.
  *
- * Каждый буст живёт в двух фазах:
- *   работа (boostMs) — усиление активно, таймер идёт вниз;
- *   откат (cooldownMs) — буст «остывает», кнопка заблокирована.
- *
- * Состояние живёт отдельно от прогресса (hooks/useBoosts.ts): бусты не
- * должны участвовать в общей атомарной записи баланса — иначе каждый
- * чих буста переписывал бы весь снимок прогресса.
+ * Визуально это одна семья с монетой: та же круглая форма, тот же
+ * оранжевый градиент в активной фазе и то же сияние. Разница только
+ * в размере и в кольце-таймере вокруг кнопки:
+ *   работа   — яркое кольцо и градиент, как у монеты;
+ *   откат    — приглушённое кольцо, ядро кнопки уходит в фон;
+ *   готов    — тонкое серое кольцо, лёгкая оранжевая подсветка ядра.
+ * Кольцо читается лучше, чем заливка снизу-вверх, и не спорит с
+ * круглой монетой за внимание.
  */
 
-import type { FC } from 'react';
 import { motion } from 'framer-motion';
+import type { FC } from 'react';
 
 import {
   BOOSTS,
   formatRemaining,
   getBoostPhase,
   getPhaseLeft,
-  getPhaseProgress,
   type BoostId,
   type BoostState,
 } from '@/lib/boosts.ts';
+
+const RING_SIZE = 56;
 
 interface BoostsPanelProps {
   states: Record<BoostId, BoostState>;
@@ -40,7 +42,6 @@ export const BoostsPanel: FC<BoostsPanelProps> = ({ states, now, onActivate, dis
         flexDirection: 'column',
         gap: 10,
         justifyContent: 'center',
-        alignSelf: 'center',
       }}
     >
       {BOOSTS.map((def) => {
@@ -49,7 +50,25 @@ export const BoostsPanel: FC<BoostsPanelProps> = ({ states, now, onActivate, dis
         const left = getPhaseLeft(state, now);
         const isReady = phase === 'ready';
         const isWork = phase === 'work';
-        const isCooling = phase === 'cooldown';
+        const canPress = isReady && !disabled;
+
+        // Доля оставшегося времени текущей фазы: кольцо «сгорает» по кругу.
+        const total = isWork ? def.workMs : def.cooldownMs;
+        const progress =
+          isReady ? 0 : Math.min(1, Math.max(0, left / Math.max(1, total)));
+        const ringTurn = `${progress}turn`;
+
+        const ring = isReady
+          ? 'var(--wc-separator)'
+          : isWork
+            ? `conic-gradient(var(--wc-accent) ${ringTurn}, rgba(255, 138, 0, 0.16) 0)`
+            : `conic-gradient(rgba(255, 184, 0, 0.5) ${ringTurn}, rgba(255, 184, 0, 0.12) 0)`;
+
+        const core = isWork
+          ? 'linear-gradient(145deg, var(--wc-accent), var(--wc-accent-2))'
+          : isReady
+            ? 'linear-gradient(145deg, rgba(255, 184, 0, 0.14), rgba(255, 138, 0, 0.06))'
+            : 'var(--wc-surface-2)';
 
         return (
           <motion.button
@@ -57,43 +76,71 @@ export const BoostsPanel: FC<BoostsPanelProps> = ({ states, now, onActivate, dis
             type="button"
             title={
               isReady
-                ? def.detail
-                : `${isWork ? 'Работает' : isCooling ? 'Откат' : 'Готов'}: ${formatRemaining(left)}`
+                ? `${def.title}: ${def.detail}`
+                : `${isWork ? 'Работает' : 'Откат'}: ${formatRemaining(left)}`
             }
             onClick={() => onActivate(def.id)}
-            disabled={!isReady || disabled}
-            whileTap={isReady && !disabled ? { scale: 0.93 } : undefined}
+            disabled={!canPress}
+            whileTap={canPress ? { scale: 0.92 } : undefined}
             transition={{ type: 'spring', stiffness: 400, damping: 17 }}
             style={{
-              position: 'relative',
               width: 76,
-              height: 76,
-              borderRadius: 'var(--wc-radius-m)',
-              border: '1px solid var(--wc-separator)',
-              background: isWork
-                ? 'linear-gradient(145deg, var(--wc-accent), var(--wc-accent-2))'
-                : 'var(--wc-surface)',
-              boxShadow: isWork ? '0 8px 22px var(--wc-glow)' : 'var(--wc-shadow-1)',
-              opacity: isReady ? 1 : 0.5,
-              cursor: isReady && !disabled ? 'pointer' : 'not-allowed',
+              padding: 0,
+              border: 0,
+              background: 'transparent',
+              cursor: canPress ? 'pointer' : 'default',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: 2,
-              padding: 4,
-              color: isWork ? 'var(--wc-accent-text)' : 'var(--wc-text)',
+              gap: 5,
+              opacity: disabled ? 0.6 : 1,
               WebkitTapHighlightColor: 'transparent',
-              overflow: 'hidden',
             }}
           >
-            <span style={{ fontSize: 22, lineHeight: 1 }}>{def.icon}</span>
+            {/* Кольцо-таймер и ядро кнопки */}
+            <span
+              style={{
+                position: 'relative',
+                width: RING_SIZE,
+                height: RING_SIZE,
+                display: 'block',
+                borderRadius: '50%',
+                background: ring,
+                boxShadow: isWork
+                  ? '0 8px 24px var(--wc-glow)'
+                  : 'var(--wc-shadow-1)',
+                // Мягкий переход, чтобы смена фазы не мигала.
+                transition: 'background 0.3s linear, box-shadow 0.3s ease',
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  inset: 3,
+                  borderRadius: '50%',
+                  background: core,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 24,
+                  lineHeight: 1,
+                  filter: isReady ? 'none' : 'grayscale(0.4)',
+                  transition: 'background 0.3s linear, filter 0.3s ease',
+                }}
+              >
+                {def.icon}
+              </span>
+            </span>
+
+            {/* Подпись: имя буста и его эффект/таймер */}
             <span
               style={{
                 fontSize: 10,
                 fontWeight: 700,
+                lineHeight: 1.1,
+                color: 'var(--wc-text)',
                 textAlign: 'center',
-                lineHeight: 1.15,
+                whiteSpace: 'nowrap',
               }}
             >
               {def.title}
@@ -102,29 +149,14 @@ export const BoostsPanel: FC<BoostsPanelProps> = ({ states, now, onActivate, dis
               style={{
                 fontSize: 10,
                 fontWeight: 600,
-                color: isWork ? 'var(--wc-accent-text)' : 'var(--wc-text-3)',
+                lineHeight: 1.1,
+                color: isWork ? 'var(--wc-accent)' : 'var(--wc-text-3)',
                 fontVariantNumeric: 'tabular-nums',
+                whiteSpace: 'nowrap',
               }}
             >
               {isReady ? def.detail : formatRemaining(left)}
             </span>
-
-            {/* Заливка оставшегося времени фазы снизу вверх */}
-            {!isReady && (
-              <span
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: `${getPhaseProgress(state, def, now) * 100}%`,
-                  background: isWork
-                    ? 'rgba(255, 255, 255, 0.22)'
-                    : 'rgba(255, 184, 0, 0.14)',
-                  pointerEvents: 'none',
-                }}
-              />
-            )}
           </motion.button>
         );
       })}

@@ -49,6 +49,11 @@ export const App: FC = () => {
   }, [bonus, claimBonus, addCoins]);
 
   const handleActivateBoost = useCallback((id: BoostId) => {
+    try {
+      hapticFeedback.impactOccurred('medium');
+    } catch {
+      // хептика недоступна вне Telegram — игнорируем
+    }
     activate(id);
     // «Бонус» выплачивается сразу, остальные влияют через множители.
     if (id === 'jackpot') claimJackpot();
@@ -187,7 +192,10 @@ export const App: FC = () => {
                 display: 'flex',
                 alignItems: 'flex-start',
                 justifyContent: 'center',
-                gap: 14,
+                gap: 8,
+                paddingLeft: 6,
+                paddingRight: 6,
+                boxSizing: 'border-box',
                 alignSelf: 'stretch',
                 flexShrink: 0,
               }}

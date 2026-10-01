@@ -48,7 +48,7 @@ export const BOOSTS: BoostDef[] = [
     id: 'regen',
     icon: '⚡',
     title: 'Бодрость',
-    detail: 'Энергия ×10',
+    detail: '×10 энергии',
     workMs: 45_000,
     cooldownMs: 180_000,
   },
@@ -56,7 +56,7 @@ export const BOOSTS: BoostDef[] = [
     id: 'jackpot',
     icon: '🎁',
     title: 'Бонус',
-    detail: '+0.0005 сразу',
+    detail: '+0.0005',
     workMs: 1,
     cooldownMs: 240_000,
   },
@@ -83,17 +83,6 @@ export const getPhaseLeft = (state: BoostState, now: number): number => {
   const phase = getBoostPhase(state, now);
   if (phase === 'ready') return 0;
   return phase === 'work' ? state.workUntil - now : state.readyAt - now;
-};
-
-/**
- * Доля оставшегося времени фазы: 1 в начале фазы → 0 в конце.
- * Используется для заливки таймера на кнопке.
- */
-export const getPhaseProgress = (state: BoostState, def: BoostDef, now: number): number => {
-  const phase = getBoostPhase(state, now);
-  if (phase === 'ready') return 0;
-  const total = phase === 'work' ? def.workMs : def.cooldownMs;
-  return Math.min(1, Math.max(0, getPhaseLeft(state, now) / total));
 };
 
 /** Форматирование оставшегося времени: «59с», «2м 05с». */
