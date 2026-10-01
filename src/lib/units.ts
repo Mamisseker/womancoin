@@ -20,29 +20,34 @@ export const MICRO_PER_TAP = 1;
 /**
  * Форматирует баланс из микро-единиц в строку токенов.
  *
- * Масштаб подбирается по величине значения, чтобы строка не разрасталась
- * и не превращалась в «0.000000» после первого же тапа:
- *   0            → «0»
- *   до 1000      → 6 знаков после запятой (виден каждый тап)
- *   до 1 000 000 → 3 знака
- *   дальше        → целые с разделителями
+ * Разряды не округляются и не теряются: миллионная доля — минимальная
+ * единица игры, и она должна быть видна в любой момент, пока баланс
+ * меньше единицы. Поэтому дробная часть берётся напрямую из целого
+ * остатка `micro % MICRO`, а не через деление на 1e6 с последующим
+ * округлением — иначе 999 999 микро-единиц показывались бы как «1»,
+ * хотя до токена ещё не хватает одной единицы.
+ *
+ * Хвостовые нули в дроби срезаются, а целая часть идёт с разделителями:
+ *   1         → «0,000001»
+ *   1500      → «0,0015»
+ *   500000    → «0,5»
+ *   999999    → «0,999999»
+ *   1000000   → «1»
+ *   1500000   → «1,5»
+ *   123456789 → «123,456789»
  */
 export const formatTokens = (micro: number): string => {
-  const safe = Number.isFinite(micro) ? Math.max(0, micro) : 0;
+  const safe = Number.isFinite(micro) ? Math.max(0, Math.floor(micro)) : 0;
   if (safe === 0) return '0';
 
-  const tokens = safe / MICRO;
+  const whole = Math.floor(safe / MICRO);
+  const frac = safe % MICRO;
 
-  if (tokens < 0.001) {
-    return tokens.toFixed(6);
-  }
-  if (tokens < 1) {
-    return tokens.toFixed(3);
-  }
-  if (tokens < 1_000) {
-    return tokens.toLocaleString('ru-RU', { maximumFractionDigits: 3 });
-  }
-  return Math.floor(tokens).toLocaleString('ru-RU');
+  const wholeStr = whole.toLocaleString('ru-RU');
+  if (frac === 0) return wholeStr;
+
+  const fracStr = String(frac).padStart(6, '0').replace(/0+$/, '');
+  return `${wholeStr},${fracStr}`;
 };
 
 /**

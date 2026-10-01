@@ -56,7 +56,7 @@ export const BOOSTS: BoostDef[] = [
     id: 'jackpot',
     icon: '🎁',
     title: 'Бонус',
-    detail: '+0.0005',
+    detail: '+0,0005',
     workMs: 1,
     cooldownMs: 240_000,
   },
