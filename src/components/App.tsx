@@ -145,7 +145,9 @@ export const App: FC = () => {
             {/* Энергия — шкала заряда от 100% до 0 */}
             <div
               style={{
-                alignSelf: 'stretch',
+                // Не растягиваем на всю ширину: полоса компактная,
+                // толще прежней — так заряд энергии заметнее.
+                width: 220,
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 7,
@@ -175,7 +177,7 @@ export const App: FC = () => {
               <div
                 style={{
                   width: '100%',
-                  height: 12,
+                  height: 18,
                   borderRadius: 100,
                   background: 'var(--wc-surface-2)',
                   overflow: 'hidden',
