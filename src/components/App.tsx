@@ -16,14 +16,13 @@ import { useProgress } from '@/hooks/useProgress.ts';
 import { useReferral } from '@/hooks/useReferral.ts';
 import { getLevelInfo } from '@/lib/levels.ts';
 import { formatTapGain, formatTokens } from '@/lib/units.ts';
-import { TapBar } from '@/components/TapBar/TapBar.tsx';
 
 const ENERGY_PER_TAP = 1;
 
 export const App: FC = () => {
   
 
-  const { coins, energy, taps, tap, addCoins, levels, coinsPerTap, maxEnergy, upgradeCost, buyUpgrade } =
+  const { coins, energy, tap, addCoins, levels, coinsPerTap, maxEnergy, upgradeCost, buyUpgrade } =
     useProgress();
   const { gender, setGender, ready } = useGender();
   const { referralLink, invitedBy, bonus, claimBonus, usingTelegram, demoStats } =
@@ -56,6 +55,9 @@ export const App: FC = () => {
   };
 
   const { level, progress } = getLevelInfo(coins);
+  // Заряд энергии в процентах — для шкалы под кнопкой.
+  const energyPercent =
+    maxEnergy > 0 ? Math.min(100, Math.max(0, (energy / maxEnergy) * 100)) : 0;
 
   if (!ready) {
     return null;
@@ -140,56 +142,65 @@ export const App: FC = () => {
               </div>
             </div>
 
-            {/* Энергия — компактный чип под балансом */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 14,
-                fontWeight: 600,
-                color: 'var(--wc-text-2)',
-                background: 'var(--wc-surface-2)',
-                padding: '9px 18px',
-                borderRadius: 100,
-                marginTop: -14,
-                flexShrink: 0,
-              }}
-            >
-              <span style={{ fontSize: 14 }}>⚡</span>
-              <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {energy}/{maxEnergy}
-              </span>
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 500,
-                  color: 'var(--wc-text-3)',
-                }}
-              >
-                · {formatTapGain(coinsPerTap)}
-              </span>
-            </div>
-
-            <TapButton gender={gender} onTap={handleTap} disabled={energy < ENERGY_PER_TAP} />
-
+            {/* Энергия — шкала заряда от 100% до 0 */}
             <div
               style={{
                 alignSelf: 'stretch',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 14,
+                gap: 7,
+                marginTop: -14,
+                flexShrink: 0,
               }}
             >
-              <TapBar taps={taps} />
-
-              <UpgradesSection
-                coins={coins}
-                levels={levels}
-                upgradeCost={upgradeCost}
-                buyUpgrade={buyUpgrade}
-              />
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: 'var(--wc-text-2)',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ fontSize: 13 }}>⚡</span>
+                  <span>Энергия</span>
+                </span>
+                <span style={{ color: 'var(--wc-text-3)' }}>
+                  {formatTapGain(coinsPerTap)}
+                </span>
+              </div>
+              <div
+                style={{
+                  width: '100%',
+                  height: 12,
+                  borderRadius: 100,
+                  background: 'var(--wc-surface-2)',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    width: `${energyPercent}%`,
+                    height: '100%',
+                    borderRadius: 100,
+                    background: 'linear-gradient(90deg, var(--wc-accent), var(--wc-accent-2))',
+                    transition: 'width 0.25s ease',
+                  }}
+                />
+              </div>
             </div>
+
+            <TapButton gender={gender} onTap={handleTap} disabled={energy < ENERGY_PER_TAP} />
+
+            <UpgradesSection
+              coins={coins}
+              levels={levels}
+              upgradeCost={upgradeCost}
+              buyUpgrade={buyUpgrade}
+            />
           </div>
         )}
 
