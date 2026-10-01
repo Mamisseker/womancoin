@@ -1,5 +1,5 @@
 import { AppRoot } from '@telegram-apps/telegram-ui';
-import { useSignal, miniApp, hapticFeedback } from '@tma.js/sdk-react';
+import { hapticFeedback } from '@tma.js/sdk-react';
 import { useEffect, useState, type FC } from 'react';
 
 import { BottomNav } from '@/components/BottomNav/BottomNav.tsx';
@@ -19,7 +19,7 @@ import { getLevelInfo } from '@/lib/levels.ts';
 const ENERGY_PER_TAP = 1;
 
 export const App: FC = () => {
-  const isDark = useSignal(miniApp.isDark);
+  
 
   const { coins, energy, tap, addCoins, levels, coinsPerTap, maxEnergy, upgradeCost, buyUpgrade } =
     useProgress();
@@ -29,8 +29,9 @@ export const App: FC = () => {
   const [tab, setTab] = useState('tap');
 
   useEffect(() => {
-    document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
-  }, [isDark]);
+    // Тёмная оранжевая тема зафиксирована: дизайн не зависит от темы Telegram.
+    document.documentElement.dataset.theme = 'dark';
+  }, []);
 
   // Разовый бонус приглашённому по реферальной ссылке.
   useEffect(() => {
@@ -63,7 +64,7 @@ export const App: FC = () => {
   }
 
   return (
-    <AppRoot appearance={isDark ? 'dark' : 'light'}>
+    <AppRoot appearance="dark">
       <div
         style={{
           height: '100dvh',
@@ -72,7 +73,7 @@ export const App: FC = () => {
           position: 'relative',
           overflow: 'hidden',
           background:
-            'radial-gradient(120% 90% at 50% -10%, rgba(238,246,210,0.7) 0%, transparent 55%), radial-gradient(100% 80% at 90% 110%, rgba(44,94,26,0.12) 0%, transparent 55%), var(--wc-bg)',
+            'radial-gradient(120% 90% at 50% -10%, rgba(255,184,0,0.12) 0%, transparent 55%), radial-gradient(100% 80% at 90% 110%, rgba(255,138,0,0.1) 0%, transparent 55%), var(--wc-bg)',
           paddingTop: 'env(safe-area-inset-top)',
           paddingBottom: 130,
           fontFamily:

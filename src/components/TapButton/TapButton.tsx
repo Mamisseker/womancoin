@@ -3,7 +3,6 @@ import { useCallback, useRef, useState, type FC } from 'react';
 
 import type { Gender } from '@/hooks/useGender.ts';
 
-import { CrystalSprite } from './CrystalTap.tsx';
 import manCoinImg from './Man-coin.png';
 import woCoinImg from './Wo-coin.png';
 
@@ -16,48 +15,35 @@ interface TapButtonProps {
 interface Particle {
   id: number;
   angle: number;
-  startX: number;
-  startY: number;
+  startRadius: number;
   distance: number;
   rotation: number;
   scale: number;
   delay: number;
 }
 
-const BURST_COUNT = 4;
-const PARTICLE_LIFETIME = 700;
-const BUTTON_SIZE = 256;
-const BUTTON_RADIUS = BUTTON_SIZE / 2;
-/** Точка на периметре квадратной кнопки для угла направления. */
-function squarePerimeter(angle: number, radius: number): { x: number; y: number } {
-  const half = radius;
-  // Проецируем луч на границу квадрата — частицы стартуют на его сторонах.
-  const c = Math.abs(Math.cos(angle));
-  const s = Math.abs(Math.sin(angle));
-  const m = Math.max(c, s);
-  return { x: (Math.cos(angle) / m) * half, y: (Math.sin(angle) / m) * half };
-}
+const BURST_COUNT = 12;
+const PARTICLE_LIFETIME = 1200;
+// Радиус круглой кнопки (260px) — частицы стартуют на его границе.
+const BUTTON_RADIUS = 130;
+const PARTICLE_SIZE = 24;
 
 export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
-  const [pressed, setPressed] = useState(false);
-  const [burstKey, setBurstKey] = useState(0);
   const coinImg = gender === 'female' ? woCoinImg : manCoinImg;
 
   const spawnBurst = useCallback(() => {
     const now = Date.now();
     const next: Particle[] = Array.from({ length: BURST_COUNT }, () => {
       // Частица расходится из центра по всему периметру,
-      // стартуя на границе кнопки и вылетая за её пределы.
+      // стартуя на краю кнопки и вылетая за её границу.
       const angle = Math.PI * 2 * Math.random() - Math.PI;
-      const jitter = (Math.random() - 0.5) * 10;
-      const start = squarePerimeter(angle, BUTTON_RADIUS + jitter);
+      const jitter = (Math.random() - 0.5) * 14;
       return {
         id: now + Math.random(),
         angle,
-        startX: start.x,
-        startY: start.y,
+        startRadius: BUTTON_RADIUS + jitter,
         distance: 50 + Math.random() * 110,
         rotation: (Math.random() - 0.5) * 260,
         scale: 0.55 + Math.random() * 0.7,
@@ -75,7 +61,6 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
   const handleClick = () => {
     if (disabled) return;
     spawnBurst();
-    setBurstKey((k) => k + 1);
     onTap();
   };
 
@@ -84,20 +69,18 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
       <motion.button
         ref={buttonRef}
         onClick={handleClick}
-        onPointerDown={() => setPressed(true)}
-        onPointerUp={() => setPressed(false)}
-        onPointerLeave={() => setPressed(false)}
         disabled={disabled}
-        aria-label="Тапнуть"
-        transition={{ type: 'spring', stiffness: 500, damping: 24 }}
+        whileTap={{ scale: 0.93 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 17 }}
         style={{
-          width: BUTTON_SIZE,
-          height: BUTTON_SIZE,
-          padding: 0,
+          width: 260,
+          height: 260,
+          borderRadius: '50%',
           border: 0,
-          borderRadius: 16,
-          background: 'transparent',
           cursor: disabled ? 'not-allowed' : 'pointer',
+          background: 'linear-gradient(145deg, var(--wc-accent), var(--wc-accent-2))',
+          boxShadow: '0 14px 40px var(--wc-glow), var(--wc-shadow-1)',
+          padding: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -106,13 +89,23 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
           outline: 'none',
           position: 'relative',
           zIndex: 2,
-          overflow: 'visible',
-          opacity: disabled ? 0.5 : 1,
-          filter: disabled ? 'saturate(0.5) brightness(0.9)' : 'none',
-          transition: 'opacity 0.15s ease, filter 0.15s ease',
+          overflow: 'hidden',
+          opacity: disabled ? 0.4 : 1,
+          filter: disabled ? 'saturate(0.5)' : 'none',
+          transition: 'opacity 0.2s ease',
         }}
       >
-        <CrystalSprite pressed={pressed} burstKey={burstKey} size={BUTTON_SIZE} />
+        <img
+          src={coinImg}
+          alt="WomanCoin"
+          style={{
+            width: '78%',
+            height: '78%',
+            objectFit: 'contain',
+            pointerEvents: 'none',
+            userSelect: 'none',
+          }}
+        />
       </motion.button>
 
       {/* Монеты, вылетающие из периметра кнопки */}
@@ -123,15 +116,15 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
             src={coinImg}
             alt=""
             initial={{
-              x: part.startX,
-              y: part.startY,
+              x: Math.cos(part.angle) * part.startRadius,
+              y: Math.sin(part.angle) * part.startRadius,
               opacity: 1,
               scale: 0.3,
               rotate: 0,
             }}
             animate={{
-              x: part.startX + Math.cos(part.angle) * part.distance,
-              y: part.startY + Math.sin(part.angle) * part.distance,
+              x: Math.cos(part.angle) * (part.startRadius + part.distance),
+              y: Math.sin(part.angle) * (part.startRadius + part.distance),
               opacity: 0,
               scale: part.scale,
               rotate: part.rotation,
@@ -143,14 +136,13 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
               left: '50%',
               top: '50%',
               // Центрируем частицу на точке старта, а не её левый верхний угол.
-              marginLeft: -15,
-              marginTop: -15,
-              width: 30,
-              height: 30,
+              marginLeft: -PARTICLE_SIZE / 2,
+              marginTop: -PARTICLE_SIZE / 2,
+              width: PARTICLE_SIZE,
+              height: PARTICLE_SIZE,
               objectFit: 'contain',
               pointerEvents: 'none',
               zIndex: 3,
-              imageRendering: 'pixelated',
               willChange: 'transform, opacity',
             }}
           />

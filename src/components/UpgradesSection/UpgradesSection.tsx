@@ -68,10 +68,10 @@ export const UpgradesSection: FC<UpgradesSectionProps> = ({
               alignItems: 'center',
               gap: 12,
               background: 'var(--wc-surface)',
-              border: '2px solid rgba(16,42,20,0.32)',
-              borderRadius: 8,
+              border: '1px solid var(--wc-separator)',
+              borderRadius: 'var(--wc-radius-m)',
               padding: '12px 14px',
-              boxShadow: '0 3px 0 rgba(16,42,20,0.12)',
+              boxShadow: 'var(--wc-shadow-1)',
             }}
           >
             <div
@@ -133,16 +133,16 @@ export const UpgradesSection: FC<UpgradesSectionProps> = ({
                 onClick={() => handleBuy(def.id)}
                 style={{
                   flexShrink: 0,
-                  border: '2px solid rgba(16,42,20,0.8)',
-                  borderRadius: 6,
+                  border: '1px solid var(--wc-separator)',
+                  borderRadius: 'var(--wc-radius-s)',
                   padding: '8px 12px',
                   fontSize: 13,
                   fontWeight: 800,
                   cursor: affordable ? 'pointer' : 'not-allowed',
-                  background: affordable ? '#dff0b0' : 'var(--wc-surface-2)',
-                  color: affordable ? 'var(--wc-accent)' : 'var(--wc-text-3)',
+                  background: affordable ? 'var(--wc-accent)' : 'var(--wc-surface-2)',
+                  color: affordable ? 'var(--wc-accent-text)' : 'var(--wc-text-3)',
                   fontVariantNumeric: 'tabular-nums',
-                  boxShadow: '0 3px 0 rgba(16,42,20,0.18)',
+                  boxShadow: 'var(--wc-shadow-1)',
                   WebkitTapHighlightColor: 'transparent',
                 }}
               >

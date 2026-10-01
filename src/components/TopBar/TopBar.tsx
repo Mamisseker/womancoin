@@ -22,16 +22,16 @@ export const TopBar: FC<TopBarProps> = ({ level, progress }) => {
           style={{
             width: 48,
             height: 48,
-            borderRadius: 6,
-            background: 'linear-gradient(135deg, #9fd14a 0%, #eef6d2 45%, #c5e878 100%)',
-            border: '3px solid rgba(16,42,20,0.9)',
+            borderRadius: 'var(--wc-radius-m)',
+            background:
+              'linear-gradient(135deg, var(--wc-accent) 0%, var(--wc-accent-2) 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: 18,
             fontWeight: 800,
-            color: 'var(--wc-accent)',
-            boxShadow: '0 3px 0 rgba(16,42,20,0.25)',
+            color: 'var(--wc-accent-text)',
+            boxShadow: 'var(--wc-shadow-1)',
             flexShrink: 0,
           }}
         >
@@ -68,8 +68,8 @@ export const TopBar: FC<TopBarProps> = ({ level, progress }) => {
               height: 8,
               marginTop: 8,
               borderRadius: 0,
-              background: 'rgba(16,42,20,0.12)',
-              border: '1px solid rgba(16,42,20,0.32)',
+              background: 'var(--wc-surface-2)',
+              border: 'none',
               overflow: 'hidden',
             }}
           >
@@ -77,7 +77,7 @@ export const TopBar: FC<TopBarProps> = ({ level, progress }) => {
               style={{
                 width: `${p}%`,
                 height: '100%',
-                background: 'repeating-linear-gradient(90deg, var(--wc-accent) 0 6px, var(--wc-accent-2) 6px 12px)',
+                background: 'linear-gradient(90deg, var(--wc-accent), var(--wc-accent-2))',
                 borderRadius: 0,
                 transition: 'width 0.3s ease',
               }}

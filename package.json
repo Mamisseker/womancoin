@@ -12,7 +12,6 @@
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
     "preview": "vite preview",
-    "gen:assets": "node scripts/pixel-art/crystal.mjs",
     "predeploy": "npm run build"
   },
   "dependencies": {

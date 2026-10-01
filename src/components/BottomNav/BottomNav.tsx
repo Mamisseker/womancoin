@@ -90,10 +90,12 @@ export const BottomNav: FC<BottomNavProps> = ({ active, onChange }) => {
           justifyContent: 'space-around',
           gap: 4,
           background: 'var(--wc-glass-bg)',
-          border: '3px solid rgba(16,42,20,0.85)',
-          borderRadius: 12,
+          border: '1px solid var(--wc-glass-border)',
+          borderRadius: 'var(--wc-radius-l)',
           padding: 8,
-          boxShadow: '0 5px 0 rgba(16,42,20,0.2), var(--wc-shadow-2)',
+          backdropFilter: 'blur(18px)',
+          WebkitBackdropFilter: 'blur(18px)',
+          boxShadow: 'var(--wc-shadow-2)',
         }}
       >
         {tabs.map((tab) => {
@@ -112,8 +114,8 @@ export const BottomNav: FC<BottomNavProps> = ({ active, onChange }) => {
                 alignItems: 'center',
                 gap: 3,
                 flex: 1,
-                border: isActive ? '2px solid rgba(16,42,20,0.75)' : '2px solid transparent',
-                borderRadius: 8,
+                border: '1px solid transparent',
+                borderRadius: 'var(--wc-radius-m)',
                 padding: '7px 4px',
                 cursor: 'pointer',
                 background: isActive ? 'var(--wc-accent-soft)' : 'transparent',
