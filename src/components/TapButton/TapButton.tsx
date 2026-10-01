@@ -22,7 +22,7 @@ interface Particle {
   delay: number;
 }
 
-const BURST_COUNT = 12;
+const BURST_COUNT = 4;
 const PARTICLE_LIFETIME = 1200;
 // Радиус круглой кнопки (260px) — частицы стартуют на его границе.
 const BUTTON_RADIUS = 130;
