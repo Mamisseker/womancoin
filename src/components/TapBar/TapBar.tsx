@@ -1,9 +1,10 @@
 /**
  * Шкала количества тапов.
  *
- * Показывает, сколько тапов игрок уже сделал, и подсвечивает текущую
- * ступень активности. Числовое значение тапов выводится компактно,
- * крупные цифры баланса остаются в шапке приложения.
+ * Полоса наполняется с каждым тапом и обнуляется, когда заполнена
+ * целиком. Всего тапов показано числом — оно продолжает копиться
+ * и от заполнения не зависит. Подписи «ступень» нет: пользователю
+ * достаточно видеть, как растёт шкала.
  */
 
 import type { FC } from 'react';
@@ -13,27 +14,24 @@ interface TapBarProps {
   taps: number;
 }
 
-/** Ступени шкалы: на каждой следующей требуется больше тапов. */
-const STEPS = [10, 50, 100, 250, 500, 1000, 2500, 5000] as const;
-
-/** Находим ступень, на которой находится игрок. */
-const getStep = (taps: number): { index: number; current: number } => {
-  let index = 0;
-  for (let i = 0; i < STEPS.length; i += 1) {
-    if (taps >= STEPS[i]) index = i;
-  }
-  return { index, current: STEPS[index] };
-};
+/**
+ * Сколько тапов умещается в одно заполнение полосы.
+ * Полоса доходит до 100% и начинает заново — чем больше тапов,
+ * тем реже это происходит, поэтому шкала не «прыгает» каждый тап.
+ */
+const TICKS_PER_FILL = 100;
 
 export const TapBar: FC<TapBarProps> = ({ taps }) => {
   const safeTaps = Number.isFinite(taps) ? Math.max(0, Math.floor(taps)) : 0;
-  const { index, current } = getStep(safeTaps);
 
-  // Прогресс внутри текущей ступени: от предыдущей до текущей отметки.
-  const previous = index === 0 ? 0 : STEPS[index - 1];
-  const span = current - previous;
-  const progress = span > 0 ? Math.min(100, ((safeTaps - previous) / span) * 100) : 100;
-  const isLast = index === STEPS.length - 1;
+  // Позиция внутри текущего цикла: 0..TICKS_PER_FILL.
+  const position = safeTaps % TICKS_PER_FILL;
+
+  // Ровно на границе цикла остаток равен нулю, поэтому «полную» полосу
+  // показываем явно: иначе шкала перескакивала бы с 99% сразу на 0%,
+  // и полное заполнение нигде не было бы видно.
+  const isFull = position === 0 && safeTaps > 0;
+  const progress = isFull ? 100 : (position / TICKS_PER_FILL) * 100;
 
   return (
     <div
@@ -41,7 +39,7 @@ export const TapBar: FC<TapBarProps> = ({ taps }) => {
         alignSelf: 'stretch',
         display: 'flex',
         flexDirection: 'column',
-        gap: 7,
+        gap: 8,
         background: 'var(--wc-surface)',
         border: '1px solid var(--wc-separator)',
         borderRadius: 18,
@@ -70,7 +68,7 @@ export const TapBar: FC<TapBarProps> = ({ taps }) => {
         </div>
         <div
           style={{
-            fontSize: 13,
+            fontSize: 15,
             fontWeight: 800,
             color: 'var(--wc-text)',
             fontVariantNumeric: 'tabular-nums',
@@ -82,8 +80,9 @@ export const TapBar: FC<TapBarProps> = ({ taps }) => {
 
       <div
         style={{
+          position: 'relative',
           width: '100%',
-          height: 8,
+          height: 12,
           borderRadius: 100,
           background: 'var(--wc-surface-2)',
           overflow: 'hidden',
@@ -95,26 +94,10 @@ export const TapBar: FC<TapBarProps> = ({ taps }) => {
             height: '100%',
             borderRadius: 100,
             background: 'linear-gradient(90deg, var(--wc-accent), var(--wc-accent-2))',
-            transition: 'width 0.25s ease',
+            // Плавное движение при тапе; в момент сброса полоса не «прыгает».
+            transition: 'width 0.18s ease-out',
           }}
         />
-      </div>
-
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 8,
-          fontSize: 11,
-          fontWeight: 600,
-          color: 'var(--wc-text-3)',
-        }}
-      >
-        <span>Ступень {index + 1} из {STEPS.length}</span>
-        <span>
-          {isLast ? 'максимум' : `до ${STEPS[index + 1].toLocaleString('ru-RU')}`}
-        </span>
       </div>
     </div>
   );
