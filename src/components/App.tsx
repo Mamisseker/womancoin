@@ -118,30 +118,6 @@ export const App: FC = () => {
               overscrollBehavior: 'contain',
             }}
           >
-            {/* Баланс — крупный title на фоне */}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 6,
-                flexShrink: 0,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 30,
-                  fontWeight: 700,
-                  lineHeight: 1,
-                  color: 'var(--wc-text)',
-                  letterSpacing: -0.6,
-                  fontVariantNumeric: 'tabular-nums',
-                }}
-              >
-                {formatTokens(coins)}
-              </div>
-            </div>
-
             {/* Энергия — шкала заряда от 100% до 0 */}
             <div
               style={{
@@ -151,7 +127,6 @@ export const App: FC = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 7,
-                marginTop: -14,
                 flexShrink: 0,
               }}
             >
@@ -196,6 +171,42 @@ export const App: FC = () => {
             </div>
 
             <TapButton gender={gender} onTap={handleTap} disabled={energy < ENERGY_PER_TAP} />
+
+            {/* Баланс — под монетой */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 4,
+                marginTop: -18,
+                flexShrink: 0,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 34,
+                  fontWeight: 700,
+                  lineHeight: 1,
+                  color: 'var(--wc-text)',
+                  letterSpacing: -0.8,
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {formatTokens(coins)}
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: 'var(--wc-text-3)',
+                  letterSpacing: 2,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Woman Coins
+              </div>
+            </div>
 
             <UpgradesSection
               coins={coins}
