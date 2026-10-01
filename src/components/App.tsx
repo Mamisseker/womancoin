@@ -196,7 +196,7 @@ export const App: FC = () => {
         )}
 
         {tab === 'boost' && (
-          <FactoryPage />
+          <FactoryPage tapLevel={coinsPerTap - 1} />
         )}
 
         {tab === 'friends' && (
