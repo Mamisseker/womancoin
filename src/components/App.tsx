@@ -8,13 +8,11 @@ import { FriendsPage } from '@/components/FriendsPage/FriendsPage.tsx';
 import { GenderSelect } from '@/components/GenderSelect/GenderSelect.tsx';
 import { StatsPage } from '@/components/StatsPage/StatsPage.tsx';
 import { TapButton } from '@/components/TapButton/TapButton.tsx';
-import { TopBar } from '@/components/TopBar/TopBar.tsx';
 
 import { WalletPage } from '@/components/WalletPage/WalletPage.tsx';
 import { useGender } from '@/hooks/useGender.ts';
 import { useProgress } from '@/hooks/useProgress.ts';
 import { useReferral } from '@/hooks/useReferral.ts';
-import { getLevelInfo } from '@/lib/levels.ts';
 import { formatTapGain, formatTokens } from '@/lib/units.ts';
 import { BoostsPanel } from '@/components/BoostsPanel/BoostsPanel.tsx';
 import type { BoostId } from '@/lib/boosts.ts';
@@ -69,7 +67,6 @@ export const App: FC = () => {
     }
   };
 
-  const { level, progress } = getLevelInfo(coins);
   // Заряд энергии в процентах — для шкалы под кнопкой.
   const energyPercent =
     maxEnergy > 0 ? Math.min(100, Math.max(0, (energy / maxEnergy) * 100)) : 0;
@@ -115,8 +112,6 @@ export const App: FC = () => {
             filter: 'blur(28px)',
           }}
         />
-
-        <TopBar level={level} progress={progress} />
 
         {tab === 'tap' && (
           <div
