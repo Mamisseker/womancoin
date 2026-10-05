@@ -135,22 +135,20 @@ export const App: FC = () => {
               overscrollBehavior: 'contain',
             }}
           >
-            {/* Внутренний блок центрируется по вертикали через auto-отступы,
-                а не justifyContent: 'center'. При нехватке места auto-отступы
-                схлопываются в ноль и контент остаётся доступным прокруткой,
-                тогда как justify-content обрезал бы верх экрана. */}
+            {/* Шкала энергии закреплена у верхнего края и вынесена из
+                центрируемого блока: иначе она сдвинула бы круг монеты
+                вниз от геометрического центра экрана. */}
             <div
               style={{
+                position: 'absolute',
+                top: 8,
+                left: 0,
+                right: 0,
                 display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 36,
-                margin: 'auto 0',
-                paddingTop: 8,
-                paddingBottom: 24,
+                justifyContent: 'center',
+                pointerEvents: 'none',
               }}
             >
-              {/* Энергия — шкала заряда от 100% до 0 */}
               <div
                 style={{
                   // Не растягиваем на всю ширину: полоса компактная,
@@ -201,7 +199,21 @@ export const App: FC = () => {
                   />
                 </div>
               </div>
+            </div>
 
+            {/* Круг монеты с бустами центрируется по вертикали через auto-отступы,
+                а не justifyContent: 'center'. При нехватке места auto-отступы
+                схлопываются в ноль и контент остаётся доступным прокруткой,
+                тогда как justify-content обрезал бы верх экрана. */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                margin: 'auto 0',
+                paddingBottom: 24,
+              }}
+            >
               {/* Монета с бустами справа; баланс остаётся под монетой,
                   поэтому левая колонка шириной ровно в кнопку. */}
               <div
