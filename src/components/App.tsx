@@ -29,9 +29,9 @@ export const App: FC = () => {
   
 
   const { gender, setGender, ready } = useGender();
-  const { states: boostStates, now: boostNow, activate, isActive } = useBoosts();
+  const { states: boostStates, now: boostNow, activate, isWorking } = useBoosts();
   const { coins, energy, tap, addCoins, coinsPerTap, maxEnergy, claimJackpot } =
-    useProgress({ turboTap: isActive('turboTap'), regen: isActive('regen') });
+    useProgress({ turboTap: isWorking('turboTap'), regen: isWorking('regen') });
   const { referralLink, invitedBy, bonus, claimBonus, usingTelegram, demoStats } =
     useReferral();
   const [tab, setTab] = useState('tap');

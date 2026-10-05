@@ -1,5 +1,5 @@
 /**
- * Хук временных бустов с кулдауном.
+ * Хук бустов со стаком применений.
  *
  * Состояние бустов пишется в CloudStorage одним ключом и дублируется
  * в localStorage — по тем же причинам, что и прогресс (см.
@@ -15,8 +15,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   BOOSTS,
-  getBoostPhase,
-  getPhaseLeft,
+  MAX_CHARGES,
+  advanceBoost,
+  getBoostView,
+  readyBoostState,
+  type BoostDef,
   type BoostId,
   type BoostState,
 } from '@/lib/boosts.ts';
@@ -27,37 +30,35 @@ const BOOSTS_MIRROR_KEY = 'wc_boosts_v1_mirror';
 /** Тик обновления таймеров на кнопках. Чаще секунды незаметны, чаще — лишние ререндеры. */
 const TICK_MS = 500;
 
-const idleState = (): BoostState => ({ workUntil: 0, readyAt: 0 });
-
 const initialStates = (): Record<BoostId, BoostState> => ({
-  turboTap: idleState(),
-  regen: idleState(),
-  jackpot: idleState(),
+  turboTap: readyBoostState(),
+  regen: readyBoostState(),
+  jackpot: readyBoostState(),
 });
+
+const num = (v: unknown): number => {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+};
 
 const sanitizeStates = (raw: unknown): Record<BoostId, BoostState> | null => {
   if (typeof raw !== 'object' || raw === null) return null;
   const obj = raw as Record<string, unknown>;
-  const num = (v: unknown): number => {
-    const n = Number(v);
-    return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
-  };
   const out = initialStates();
   let seen = false;
   for (const def of BOOSTS) {
     const v = obj[def.id];
-    if (typeof v === 'object' && v !== null) {
-      const rec = v as Record<string, unknown>;
-      const readyAt = num(rec.readyAt);
-      // Старая схема хранила одну метку `until`; переносим её в откат,
-      // иначе бусты, нажатые до обновления, потеряли бы своё состояние.
-      const workUntil = num(rec.workUntil);
-      out[def.id] =
-        readyAt === 0
-          ? idleState()
-          : { workUntil: Math.min(workUntil, readyAt), readyAt };
-      seen = true;
-    }
+    if (typeof v !== 'object' || v === null) continue;
+    const rec = v as Record<string, unknown>;
+    // Без поля charges запись старой схемы (одна метка времени) —
+    // безопаснее счесть буст пустым, чем угадывать остаток зарядов.
+    if (typeof rec.charges !== 'number') continue;
+    out[def.id] = {
+      charges: Math.min(num(rec.charges), MAX_CHARGES),
+      workUntil: num(rec.workUntil),
+      refillAt: num(rec.refillAt),
+    };
+    seen = true;
   }
   return seen ? out : null;
 };
@@ -70,29 +71,8 @@ const readLocal = (): Record<BoostId, BoostState> | null => {
   }
 };
 
-/**
- * Приводит состояние к «живому» виду на момент now.
- *
- * Это важно для честности кулдауна: отсчёт привязан к абсолютному
- * времени, поэтому закрытое приложение не «замораживает» таймеры.
- * Если к now откат уже истёк, буст сразу готов; если игрок вернулся
- * в разгар отката — откат продолжается с того же момента, а не
- * начинается заново.
- */
-const normalize = (
-  states: Record<BoostId, BoostState>,
-  now: number,
-): Record<BoostId, BoostState> => {
-  const out = initialStates();
-  for (const def of BOOSTS) {
-    const state = states[def.id];
-    if (!state || state.readyAt <= now) continue; // работа и откат истекли
-    // Работа могла закончиться, пока приложение было закрыто:
-    // тогда сразу показываем откат, а не «работающий» буст.
-    out[def.id] = { workUntil: Math.min(state.workUntil, now), readyAt: state.readyAt };
-  }
-  return out;
-};
+const defOf = (id: BoostId): BoostDef | undefined =>
+  BOOSTS.find((b) => b.id === id);
 
 export const useBoosts = () => {
   const [states, setStates] = useState<Record<BoostId, BoostState>>(initialStates);
@@ -116,10 +96,17 @@ export const useBoosts = () => {
       }
       if (cancelled) return;
 
-      const best = local ?? cloud;
       const at = Date.now();
       setNow(at);
-      if (best) setStates(normalize(best, at));
+      const best = local ?? cloud;
+      if (best) {
+        // Заряды дозаряжаются за всё время, пока приложение было закрыто.
+        const next = { ...best };
+        for (const def of BOOSTS) {
+          next[def.id] = advanceBoost(best[def.id], def, at);
+        }
+        setStates(next);
+      }
       setLoaded(true);
     })();
 
@@ -128,20 +115,22 @@ export const useBoosts = () => {
     };
   }, []);
 
-  // Тикер: двигает таймеры на кнопках и подводит бусты к концу фазы.
+  // Тик: двигает таймеры работы и доливает заряды.
   useEffect(() => {
     const id = window.setInterval(() => {
       const t = Date.now();
       setNow(t);
 
-      // Фаза закончилась — фиксируем «готов к применению», иначе
-      // кнопка осталась бы заблокированной до перезапуска.
       let changed = false;
       const next = { ...statesRef.current };
       for (const def of BOOSTS) {
-        const state = next[def.id];
-        if (state.readyAt !== 0 && t >= state.readyAt) {
-          next[def.id] = idleState();
+        const advanced = advanceBoost(next[def.id], def, t);
+        if (
+          advanced.charges !== next[def.id].charges ||
+          advanced.workUntil !== next[def.id].workUntil ||
+          advanced.refillAt !== next[def.id].refillAt
+        ) {
+          next[def.id] = advanced;
           changed = true;
         }
       }
@@ -150,7 +139,7 @@ export const useBoosts = () => {
     return () => window.clearInterval(id);
   }, []);
 
-  // Сохранение при смене фаз.
+  // Сохранение при смене состояния.
   useEffect(() => {
     if (!loaded) return;
     const payload = JSON.stringify(states);
@@ -168,26 +157,37 @@ export const useBoosts = () => {
     })();
   }, [states, loaded]);
 
-  const activate = useCallback(
+  /** Тратит один заряд буста и запускает его работу. */
+  const activate = useCallback((id: BoostId) => {
+    const def = defOf(id);
+    if (!def) return;
+    const t = Date.now();
+    const current = statesRef.current[id] ?? readyBoostState();
+    const view = getBoostView(current, t);
+
+    // Во время работы тратить заряд нельзя: игрок не сможет
+    // продлить эффект до того, как предыдущий закончится.
+    if (view.working || view.charges <= 0) return;
+
+    const charges = view.charges - 1;
+    // Заряды кончились — запускаем откат, возвращающий по одному.
+    const refillAt = charges === 0 ? t + def.refillMs : current.refillAt;
+
+    setStates((prev) => ({
+      ...prev,
+      [id]: { charges, workUntil: t + def.workMs, refillAt },
+    }));
+  }, []);
+
+  /** Идёт ли работа буста прямо сейчас — от этого зависят множители. */
+  const isWorking = useCallback(
     (id: BoostId) => {
-      const def = BOOSTS.find((b) => b.id === id);
-      if (!def) return;
-      const t = Date.now();
-      if (getBoostPhase(statesRef.current[id] ?? idleState(), t) !== 'ready') return;
-      // Работа и откат идут подряд: работа начинается нажатием,
-      // откат стартует в момент её окончания.
-      setStates((prev) => ({
-        ...prev,
-        [id]: { workUntil: t + def.workMs, readyAt: t + def.workMs + def.cooldownMs },
-      }));
+      const def = defOf(id);
+      if (!def) return false;
+      return getBoostView(statesRef.current[id] ?? readyBoostState(), Date.now()).working;
     },
     [],
   );
 
-  const isActive = useCallback(
-    (id: BoostId) => getBoostPhase(statesRef.current[id] ?? idleState(), Date.now()) === 'work',
-    [],
-  );
-
-  return { states, now, activate, isActive, loaded, getPhaseLeft };
+  return { states, now, activate, isWorking, loaded };
 };

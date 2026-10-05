@@ -5,10 +5,13 @@
  * оранжевый градиент в активной фазе и то же сияние. Разница только
  * в размере и в кольце-таймере вокруг кнопки:
  *   работа   — яркое кольцо и градиент, как у монеты;
- *   откат    — приглушённое кольцо, ядро кнопки уходит в фон;
- *   готов    — тонкое серое кольцо, лёгкая оранжевая подсветка ядра.
+ *   заряды   — кольцо показывает, как набирается следующий заряд;
+ *   полный   — кольцо замкнуто, все применения готовы.
  * Кольцо читается лучше, чем заливка снизу-вверх, и не спорит с
  * круглой монетой за внимание.
+ *
+ * Бейдж «×N» показывает стак применений: потратили одно — стало ×2,
+ * кончилось — ждём откат, потом снова 1, 2, 3.
  */
 
 import { motion } from 'framer-motion';
@@ -16,9 +19,10 @@ import type { FC } from 'react';
 
 import {
   BOOSTS,
+  MAX_CHARGES,
   formatRemaining,
-  getBoostPhase,
-  getPhaseLeft,
+  getBoostView,
+  getRingProgress,
   type BoostId,
   type BoostState,
 } from '@/lib/boosts.ts';
@@ -45,39 +49,46 @@ export const BoostsPanel: FC<BoostsPanelProps> = ({ states, now, onActivate, dis
       }}
     >
       {BOOSTS.map((def) => {
-        const state = states[def.id] ?? { workUntil: 0, readyAt: 0 };
-        const phase = getBoostPhase(state, now);
-        const left = getPhaseLeft(state, now);
-        const isReady = phase === 'ready';
-        const isWork = phase === 'work';
-        const canPress = isReady && !disabled;
+        const state = states[def.id] ?? { charges: 0, workUntil: 0, refillAt: 0 };
+        const view = getBoostView(state, now);
+        const isWorking = view.working;
+        const isEmpty = !isWorking && view.charges <= 0;
+        const canPress = !isWorking && view.charges > 0 && !disabled;
 
-        // Доля оставшегося времени текущей фазы: кольцо «сгорает» по кругу.
-        const total = isWork ? def.workMs : def.cooldownMs;
-        const progress =
-          isReady ? 0 : Math.min(1, Math.max(0, left / Math.max(1, total)));
+        const progress = getRingProgress(view, def);
         const ringTurn = `${progress}turn`;
 
-        const ring = isReady
-          ? 'var(--wc-separator)'
-          : isWork
+        const ring = view.charges >= MAX_CHARGES && !isWorking
+          ? 'var(--wc-accent)'
+          : isWorking
             ? `conic-gradient(var(--wc-accent) ${ringTurn}, rgba(255, 138, 0, 0.16) 0)`
-            : `conic-gradient(rgba(255, 184, 0, 0.5) ${ringTurn}, rgba(255, 184, 0, 0.12) 0)`;
+            : isEmpty
+              ? `conic-gradient(rgba(255, 184, 0, 0.5) ${ringTurn}, rgba(255, 184, 0, 0.12) 0)`
+              : `conic-gradient(var(--wc-accent) ${ringTurn}, rgba(255, 138, 0, 0.16) 0)`;
 
-        const core = isWork
+        const core = isWorking
           ? 'linear-gradient(145deg, var(--wc-accent), var(--wc-accent-2))'
-          : isReady
-            ? 'linear-gradient(145deg, rgba(255, 184, 0, 0.14), rgba(255, 138, 0, 0.06))'
-            : 'var(--wc-surface-2)';
+          : isEmpty
+            ? 'var(--wc-surface-2)'
+            : 'linear-gradient(145deg, rgba(255, 184, 0, 0.14), rgba(255, 138, 0, 0.06))';
+
+        // Подпись под кнопкой: эффект, откат или идущая работа.
+        const caption = isWorking
+          ? formatRemaining(view.workLeft)
+          : isEmpty
+            ? formatRemaining(view.refillLeft)
+            : def.detail;
 
         return (
           <motion.button
             key={def.id}
             type="button"
             title={
-              isReady
-                ? `${def.title}: ${def.detail}`
-                : `${isWork ? 'Работает' : 'Откат'}: ${formatRemaining(left)}`
+              isWorking
+                ? `${def.title}: работает ${formatRemaining(view.workLeft)}`
+                : isEmpty
+                  ? `${def.title}: откат ${formatRemaining(view.refillLeft)}`
+                  : `${def.title}: ${def.detail} (${view.charges} из ${MAX_CHARGES})`
             }
             onClick={() => onActivate(def.id)}
             disabled={!canPress}
@@ -106,10 +117,9 @@ export const BoostsPanel: FC<BoostsPanelProps> = ({ states, now, onActivate, dis
                 display: 'block',
                 borderRadius: '50%',
                 background: ring,
-                boxShadow: isWork
+                boxShadow: isWorking
                   ? '0 8px 24px var(--wc-glow)'
                   : 'var(--wc-shadow-1)',
-                // Мягкий переход, чтобы смена фазы не мигала.
                 transition: 'background 0.3s linear, box-shadow 0.3s ease',
               }}
             >
@@ -122,13 +132,41 @@ export const BoostsPanel: FC<BoostsPanelProps> = ({ states, now, onActivate, dis
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 24,
+                  fontSize: 22,
                   lineHeight: 1,
-                  filter: isReady ? 'none' : 'grayscale(0.4)',
+                  filter: isEmpty ? 'grayscale(0.5)' : 'none',
                   transition: 'background 0.3s linear, filter 0.3s ease',
                 }}
               >
                 {def.icon}
+              </span>
+
+              {/* Бейдж стака применений */}
+              <span
+                style={{
+                  position: 'absolute',
+                  top: -5,
+                  right: -6,
+                  minWidth: 19,
+                  height: 19,
+                  padding: '0 4px',
+                  borderRadius: 100,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 10,
+                  fontWeight: 800,
+                  lineHeight: 1,
+                  fontVariantNumeric: 'tabular-nums',
+                  color: view.charges > 0 ? 'var(--wc-accent-text)' : 'var(--wc-text-3)',
+                  background:
+                    view.charges > 0
+                      ? 'var(--wc-accent)'
+                      : 'var(--wc-surface-2)',
+                  border: '1px solid var(--wc-separator)',
+                }}
+              >
+                ×{view.charges}
               </span>
             </span>
 
@@ -150,12 +188,16 @@ export const BoostsPanel: FC<BoostsPanelProps> = ({ states, now, onActivate, dis
                 fontSize: 10,
                 fontWeight: 600,
                 lineHeight: 1.1,
-                color: isWork ? 'var(--wc-accent)' : 'var(--wc-text-3)',
+                color: isWorking
+                  ? 'var(--wc-accent)'
+                  : isEmpty
+                    ? 'var(--wc-text-3)'
+                    : 'var(--wc-text-2)',
                 fontVariantNumeric: 'tabular-nums',
                 whiteSpace: 'nowrap',
               }}
             >
-              {isReady ? def.detail : formatRemaining(left)}
+              {caption}
             </span>
           </motion.button>
         );
