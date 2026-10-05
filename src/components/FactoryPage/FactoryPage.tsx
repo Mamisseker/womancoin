@@ -1,39 +1,47 @@
+/**
+ * Вкладка «Завод»: карусель своих заводов и сбор продукции.
+ *
+ * Заводы вынесены в горизонтальную ленту не ради экономики, а ради
+ * будущего: игрок листает по своим заводам, и когда их станет больше
+ * трёх, лента просто продолжится, а не переедет в новую вёрстку.
+ *
+ * Продукция копится сама, пока игрок не забирает её зелёной кнопкой.
+ * Кнопка загорается ярко-зелёным, когда есть что забирать, и на ней
+ * видно, сколько именно накопилось.
+ */
+
 import { hapticFeedback } from '@tma.js/sdk-react';
-import { useMemo, useState, type FC } from 'react';
+import { motion } from 'framer-motion';
+import type { FC } from 'react';
 
-import factoryImg from '@/components/FactoryPage/factory.png';
-import {
-  FACTORY_UPGRADES,
-  TIER_LABELS,
-  type FactoryUpgradeDef,
-} from '@/components/FactoryPage/factoryUpgrades.ts';
+import { FACTORIES, type FactoryDef } from '@/hooks/useFactories.ts';
+import { formatTokens } from '@/lib/units.ts';
 
-type SortKey = 'cost' | 'level';
-
-const SORT_LABELS: Record<SortKey, string> = {
-  cost: 'по цене',
-  level: 'по уровню',
-};
+const CARD_WIDTH = 148;
+const CARD_HEIGHT = 190;
+/** Ширина зелёной кнопки совпадает с шириной карточки завода. */
+const COLLECT_WIDTH = CARD_WIDTH;
 
 interface FactoryPageProps {
-  /** Уровень тапа игрока — от него зависит, какие карточки открыты. */
-  tapLevel: number;
+  /** Накопленная продукция, микро-единицы. */
+  pending: number;
+  onCollect: () => void;
+  /** Заводы ещё считаются (первая загрузка) — кнопку держим неактивной. */
+  loading?: boolean;
 }
 
-export const FactoryPage: FC<FactoryPageProps> = ({ tapLevel }) => {
-  const [sortKey, setSortKey] = useState<SortKey>('cost');
+export const FactoryPage: FC<FactoryPageProps> = ({ pending, onCollect, loading }) => {
+  const hasLoot = pending > 0;
 
-  // Копия массива перед сортировкой: мутировать исходный нельзя,
-  // иначе следующий переключатель отсортирует уже разобранный список.
-  const upgrades = useMemo(() => {
-    const list = [...FACTORY_UPGRADES];
-    list.sort((a, b) =>
-      sortKey === 'cost'
-        ? a.baseCost - b.baseCost
-        : a.requiredTapLevel - b.requiredTapLevel,
-    );
-    return list;
-  }, [sortKey]);
+  const handleCollect = () => {
+    if (!hasLoot || loading) return;
+    try {
+      hapticFeedback.impactOccurred('medium');
+    } catch {
+      // хептика недоступна вне Telegram — игнорируем
+    }
+    onCollect();
+  };
 
   return (
     <div
@@ -41,192 +49,234 @@ export const FactoryPage: FC<FactoryPageProps> = ({ tapLevel }) => {
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        gap: 14,
-        paddingLeft: 20,
-        paddingRight: 20,
+        gap: 18,
+        paddingTop: 20,
         paddingBottom: 24,
-        boxSizing: 'border-box',
-        overflowY: 'auto',
+        position: 'relative',
+        zIndex: 1,
       }}
     >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-        }}
-      >
-        <img
-          src={factoryImg}
-          alt="Завод"
+      {/* Заголовок */}
+      <div style={{ paddingLeft: 20, paddingRight: 20 }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--wc-text)' }}>
+          Мои заводы
+        </div>
+        <div
           style={{
-            width: 52,
-            height: 52,
-            borderRadius: '50%',
-            objectFit: 'cover',
-            border: '1px solid var(--wc-separator)',
-            boxShadow: 'var(--wc-shadow-1)',
-            flexShrink: 0,
-            pointerEvents: 'none',
-            userSelect: 'none',
+            fontSize: 13,
+            fontWeight: 500,
+            color: 'var(--wc-text-2)',
+            marginTop: 3,
           }}
-        />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--wc-text)' }}>
-            Завод
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--wc-text-2)' }}>
-            Усилители производства
-          </div>
+        >
+          Листай, чтобы посмотреть все. Продукция копится сама.
         </div>
       </div>
 
-      {/* Переключатель сортировки */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => {
-          const active = key === sortKey;
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => {
-                try {
-                  hapticFeedback.selectionChanged();
-                } catch {
-                  // хептика недоступна вне Telegram — игнорируем
-                }
-                setSortKey(key);
-              }}
-              style={{
-                flex: 1,
-                padding: '8px 12px',
-                fontSize: 13,
-                fontWeight: 700,
-                fontFamily: 'inherit',
-                cursor: 'pointer',
-                borderRadius: 'var(--wc-radius-s)',
-                border: '1px solid var(--wc-separator)',
-                background: active ? 'var(--wc-accent)' : 'var(--wc-surface)',
-                color: active ? 'var(--wc-accent-text)' : 'var(--wc-text-2)',
-                boxShadow: 'var(--wc-shadow-1)',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              {SORT_LABELS[key]}
-            </button>
-          );
-        })}
+      {/* Лента заводов */}
+      <div
+        style={{
+          display: 'flex',
+          gap: 12,
+          paddingLeft: 20,
+          paddingRight: 20,
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+        }}
+      >
+        {FACTORIES.map((def) => (
+          <FactoryCard key={def.id} def={def} />
+        ))}
+
+        {/* Заглушка будущих заводов: видно, что лента продолжится */}
+        <div
+          style={{
+            width: CARD_WIDTH,
+            height: CARD_HEIGHT,
+            flexShrink: 0,
+            borderRadius: 'var(--wc-radius-m)',
+            border: '1px dashed var(--wc-separator)',
+            background: 'transparent',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            color: 'var(--wc-text-3)',
+          }}
+        >
+          <span style={{ fontSize: 26, lineHeight: 1, opacity: 0.6 }}>＋</span>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              textAlign: 'center',
+              padding: '0 10px',
+              lineHeight: 1.3,
+            }}
+          >
+            Скоро новый завод
+          </span>
+        </div>
       </div>
 
-      {upgrades.map((def) => (
-        <FactoryCard key={def.id} def={def} tapLevel={tapLevel} />
-      ))}
+      {/* Приёмник продукции */}
+      <div style={{ paddingLeft: 20, paddingRight: 20 }}>
+        <CollectButton
+          pending={pending}
+          active={hasLoot}
+          disabled={loading}
+          onClick={handleCollect}
+        />
+      </div>
     </div>
   );
 };
 
 interface FactoryCardProps {
-  def: FactoryUpgradeDef;
-  tapLevel: number;
+  def: FactoryDef;
 }
 
-const FactoryCard: FC<FactoryCardProps> = ({ def, tapLevel }) => {
-  const locked = tapLevel < def.requiredTapLevel;
-
+const FactoryCard: FC<FactoryCardProps> = ({ def }) => {
   return (
     <div
       style={{
+        width: CARD_WIDTH,
+        height: CARD_HEIGHT,
+        flexShrink: 0,
+        scrollSnapAlign: 'start',
         display: 'flex',
-        alignItems: 'center',
-        gap: 12,
+        flexDirection: 'column',
         background: 'var(--wc-surface)',
         border: '1px solid var(--wc-separator)',
         borderRadius: 'var(--wc-radius-m)',
-        padding: '12px 14px',
+        overflow: 'hidden',
         boxShadow: 'var(--wc-shadow-1)',
-        // Закрытые карточки приглушены, но текст остаётся читаемым.
-        opacity: locked ? 0.55 : 1,
       }}
     >
+      <img
+        src={def.image}
+        alt={def.title}
+        style={{
+          width: '100%',
+          height: 118,
+          objectFit: 'cover',
+          display: 'block',
+          pointerEvents: 'none',
+          userSelect: 'none',
+        }}
+      />
       <div
         style={{
-          width: 44,
-          height: 44,
-          borderRadius: 12,
-          flexShrink: 0,
+          flex: 1,
           display: 'flex',
-          alignItems: 'center',
+          flexDirection: 'column',
           justifyContent: 'center',
-          fontSize: 22,
-          background: 'var(--wc-surface-2)',
-          filter: locked ? 'grayscale(1)' : 'none',
+          gap: 2,
+          padding: '10px 12px',
         }}
       >
-        {def.icon}
-      </div>
-
-      <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: 700,
             color: 'var(--wc-text)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
+            lineHeight: 1.2,
           }}
         >
           {def.title}
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: 0.4,
-              textTransform: 'uppercase',
-              color: 'var(--wc-accent)',
-              background: 'var(--wc-accent-soft)',
-              borderRadius: 6,
-              padding: '2px 6px',
-            }}
-          >
-            {TIER_LABELS[def.tier]}
-          </span>
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--wc-text-3)' }}>
+          {def.detail}
         </div>
         <div
           style={{
             fontSize: 12,
-            fontWeight: 500,
-            color: 'var(--wc-text-2)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            fontWeight: 800,
+            color: 'var(--wc-accent)',
+            fontVariantNumeric: 'tabular-nums',
+            marginTop: 3,
           }}
         >
-          {def.detail}
+          +{formatTokens(def.ratePerHour)} /час
         </div>
       </div>
-
-      <div style={{ flexShrink: 0, textAlign: 'right' }}>
-        {locked ? (
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--wc-text-3)' }}>
-            уро. {def.requiredTapLevel}
-          </div>
-        ) : (
-          <>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 800,
-                color: 'var(--wc-accent)',
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            >
-              {def.baseCost.toLocaleString('ru-RU')}
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--wc-text-3)' }}>монет</div>
-          </>
-        )}
-      </div>
     </div>
+  );
+};
+
+interface CollectButtonProps {
+  pending: number;
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}
+
+/**
+ * Зелёная кнопка приёма продукции.
+ *
+ * Ширина совпадает с карточкой завода. Когда продукция есть, кнопка
+ * горит ярко-зелёным и слегка пульсирует, чтобы её было видно с
+ * противоположного конца экрана; на ней же написано, сколько накопилось.
+ * Одно нажатие переводит всё на счёт.
+ */
+const CollectButton: FC<CollectButtonProps> = ({ pending, active, disabled, onClick }) => {
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      disabled={!active || disabled}
+      animate={active ? { scale: [1, 1.025, 1] } : { scale: 1 }}
+      transition={
+        active
+          ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' }
+          : { duration: 0.2 }
+      }
+      whileTap={active ? { scale: 0.96 } : undefined}
+      style={{
+        width: COLLECT_WIDTH,
+        maxWidth: '100%',
+        padding: '12px 14px',
+        borderRadius: 'var(--wc-radius-m)',
+        border: '1px solid rgba(255, 255, 255, 0.16)',
+        fontFamily: 'inherit',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: 2,
+        cursor: active && !disabled ? 'pointer' : 'not-allowed',
+        textAlign: 'left',
+        WebkitTapHighlightColor: 'transparent',
+        // Ярко-зелёный, когда есть продукция; спокойный зелёный, когда пусто.
+        background: active
+          ? 'linear-gradient(135deg, #2ee66b 0%, #12b355 100%)'
+          : 'linear-gradient(135deg, rgba(46, 230, 107, 0.16) 0%, rgba(18, 179, 85, 0.12) 100%)',
+        boxShadow: active
+          ? '0 10px 28px rgba(46, 230, 107, 0.45), 0 0 0 1px rgba(46, 230, 107, 0.35)'
+          : 'var(--wc-shadow-1)',
+        color: active ? '#04180c' : 'var(--wc-text-3)',
+        opacity: disabled ? 0.6 : 1,
+      }}
+    >
+      <span style={{ fontSize: 13, fontWeight: 800, lineHeight: 1.2 }}>
+        {active ? 'Забрать продукцию' : 'Продукция копится'}
+      </span>
+      <span
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          lineHeight: 1.2,
+          opacity: 0.85,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {active
+          ? `+${formatTokens(pending)} на счёт`
+          : `Заводы работают · ${formatTokens(3300)} /час`}
+      </span>
+    </motion.button>
   );
 };

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Литейный цех: корпус, плавильная печь и струя расплава -->
+  <defs>
+    <linearGradient id="foundryBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2118"/>
+      <stop offset="1" stop-color="#1c1c1e"/>
+    </linearGradient>
+    <linearGradient id="foundryAccent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffb800"/>
+      <stop offset="1" stop-color="#ff8a00"/>
+    </linearGradient>
+    <linearGradient id="lava" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#ff8a00"/>
+      <stop offset="1" stop-color="#ffd166"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="128" height="128" rx="24" fill="url(#foundryBg)"/>
+  <circle cx="64" cy="96" r="36" fill="#ffb800" opacity="0.12"/>
+
+  <!-- высокая труба -->
+  <rect x="28" y="22" width="13" height="42" rx="4" fill="#3a3a3c"/>
+  <rect x="26" y="18" width="17" height="7" rx="3.5" fill="url(#foundryAccent)"/>
+  <circle cx="34.5" cy="15" r="4" fill="#ffb800" opacity="0.25"/>
+
+  <!-- корпус цеха -->
+  <path d="M18 98V60l12 9V60l12 9V54h58v44z" fill="#333336"/>
+  <path d="M18 98V60l12 9V60l12 9V54h58v8H46v36z" fill="#3f3f43"/>
+
+  <!-- плавильная печь -->
+  <path d="M72 98V78a12 12 0 0 1 24 0v20z" fill="#2a2a2c"/>
+  <path d="M77 98V80a7 7 0 0 1 14 0v18z" fill="url(#lava)"/>
+  <rect x="70" y="94" width="28" height="6" rx="3" fill="url(#foundryAccent)"/>
+
+  <!-- струя расплава в формы -->
+  <path d="M60 76v8c0 3-4 4-4 8s4 5 4 8" stroke="url(#lava)" stroke-width="3.5"
+        fill="none" stroke-linecap="round" opacity="0.85"/>
+
+  <!-- формы -->
+  <rect x="48" y="98" width="12" height="8" rx="2" fill="#4a4a4e"/>
+  <rect x="50" y="94" width="8" height="5" rx="2" fill="url(#foundryAccent)"/>
+
+  <!-- окна -->
+  <rect x="28" y="72" width="10" height="9" rx="2.5" fill="url(#foundryAccent)" opacity="0.85"/>
+  <rect x="42" y="72" width="10" height="9" rx="2.5" fill="#ffb800" opacity="0.3"/>
+
+  <!-- земля -->
+  <rect x="12" y="104" width="104" height="5" rx="2.5" fill="#4a4a4e"/>
+</svg>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type FC } from 'react';
 
 import { BottomNav } from '@/components/BottomNav/BottomNav.tsx';
 import { FactoryPage } from '@/components/FactoryPage/FactoryPage.tsx';
+import { useFactories } from '@/hooks/useFactories.ts';
 import { FriendsPage } from '@/components/FriendsPage/FriendsPage.tsx';
 import { GenderSelect } from '@/components/GenderSelect/GenderSelect.tsx';
 import { StatsPage } from '@/components/StatsPage/StatsPage.tsx';
@@ -32,6 +33,9 @@ export const App: FC = () => {
   const { states: boostStates, now: boostNow, activate, isWorking } = useBoosts();
   const { coins, energy, tap, addCoins, coinsPerTap, maxEnergy, claimJackpot } =
     useProgress({ turboTap: isWorking('turboTap'), regen: isWorking('regen') });
+
+  const { pending: factoryPending, collect: collectFactory, loaded: factoriesLoaded } =
+    useFactories(addCoins);
   const { referralLink, invitedBy, bonus, claimBonus, usingTelegram, demoStats } =
     useReferral();
   const [tab, setTab] = useState('tap');
@@ -282,7 +286,11 @@ export const App: FC = () => {
         {tab === 'stats' && <StatsPage />}
 
         {tab === 'boost' && (
-          <FactoryPage tapLevel={coinsPerTap - 1} />
+          <FactoryPage
+            pending={factoryPending}
+            onCollect={collectFactory}
+            loading={!factoriesLoaded}
+          />
         )}
 
         {tab === 'friends' && (
