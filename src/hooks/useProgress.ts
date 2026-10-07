@@ -7,6 +7,7 @@ import {
   type ProgressState,
 } from '@/lib/progressStorage.ts';
 import { MICRO_PER_TAP } from '@/lib/units.ts';
+import { FACTORY_TAP_BONUS_MICRO, CRIT_MULTIPLIER, getCritChanceBps, rollCrit } from '@/lib/factories.ts';
 import { JACKPOT_MICRO, REGEN_MULTIPLIER, TURBO_TAP_MULTIPLIER } from '@/lib/boosts.ts';
 
 const BASE_MAX_ENERGY = 1000;
@@ -14,6 +15,12 @@ const BASE_MAX_ENERGY = 1000;
 const BASE_ENERGY_REGEN_MS = 5000;
 // Пассивный доход начисляется раз в минуту, пока приложение открыто.
 const PASSIVE_TICK_MS = 60_000;
+
+/** Что выдал один тап: сумма и сработал ли критический удар. */
+export interface TapResult {
+  amount: number;
+  crit: boolean;
+}
 
 export type UpgradeId = 'damage' | 'energy' | 'regen' | 'passive';
 
@@ -124,7 +131,9 @@ export const useProgress = (boosts?: { turboTap: boolean; regen: boolean }) => {
   const regenBoost = boosts?.regen ?? false;
 
   // Производные значения прокачек.
-  const baseCoinsPerTap = getCoinsPerTap(levels.damage);
+  // Заводская прибавка складывается ДО буста «Турбо»: буст умножает
+  // весь доход за клик целиком, включая то, что дали заводы.
+  const baseCoinsPerTap = getCoinsPerTap(levels.damage) + FACTORY_TAP_BONUS_MICRO;
   const coinsPerTap = turboTap ? baseCoinsPerTap * TURBO_TAP_MULTIPLIER : baseCoinsPerTap;
   const maxEnergy = getMaxEnergy(levels.energy);
   const regenMs = getRegenMs(levels.regen);
@@ -298,11 +307,18 @@ export const useProgress = (boosts?: { turboTap: boolean; regen: boolean }) => {
     }
   }, [coins, energy, levels, taps, save]);
 
-  const tap = useCallback(() => {
-    const base = getCoinsPerTap(levelsRef.current.damage);
-    setCoins((c) => c + (turboTapRef.current ? base * TURBO_TAP_MULTIPLIER : base));
+  const tap = useCallback((): TapResult => {
+    const base = getCoinsPerTap(levelsRef.current.damage) + FACTORY_TAP_BONUS_MICRO;
+    const gain = turboTapRef.current ? base * TURBO_TAP_MULTIPLIER : base;
+    // Шанс крита задаёт Химический завод. Бросок идёт по целым
+    // бейсис-поинтам: сравнение с долей от Math.random() округляло бы
+    // 0.5% вниз до «никогда».
+    const crit = rollCrit(getCritChanceBps(), Math.floor(Math.random() * 10_000));
+    const amount = crit ? gain * CRIT_MULTIPLIER : gain;
+    setCoins((c) => c + amount);
     setEnergy((e) => Math.max(0, e - 1));
     setTaps((t) => t + 1);
+    return { amount, crit };
   }, []);
 
   // Отдельные ref'ы: колбэк тапа не должен пересоздаваться каждый тик буста.

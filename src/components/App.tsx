@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, type FC } from 'react';
 
 import { BottomNav } from '@/components/BottomNav/BottomNav.tsx';
 import { FactoryPage } from '@/components/FactoryPage/FactoryPage.tsx';
-import { useFactories } from '@/hooks/useFactories.ts';
+import { useAutoclicker } from '@/hooks/useAutoclicker.ts';
 import { FriendsPage } from '@/components/FriendsPage/FriendsPage.tsx';
 import { GenderSelect } from '@/components/GenderSelect/GenderSelect.tsx';
 import { StatsPage } from '@/components/StatsPage/StatsPage.tsx';
@@ -34,8 +34,12 @@ export const App: FC = () => {
   const { coins, energy, tap, addCoins, coinsPerTap, maxEnergy, claimJackpot } =
     useProgress({ turboTap: isWorking('turboTap'), regen: isWorking('regen') });
 
-  const { pending: factoryPending, collect: collectFactory, loaded: factoriesLoaded } =
-    useFactories(addCoins);
+  const {
+    pending: factoryPending,
+    collect: collectFactory,
+    loaded: factoriesLoaded,
+    ratePerHour: factoryRatePerHour,
+  } = useAutoclicker(coinsPerTap, addCoins);
   const { referralLink, invitedBy, bonus, claimBonus, usingTelegram, demoStats } =
     useReferral();
   const [tab, setTab] = useState('tap');
@@ -68,9 +72,12 @@ export const App: FC = () => {
 
   const handleTap = () => {
     if (energy < ENERGY_PER_TAP) return;
-    tap();
+    const { crit } = tap();
     try {
-      hapticFeedback.impactOccurred('light');
+      // Критический клик отзывается заметнее обычного — иначе множитель
+      // невозможно почувствовать и он выглядит как «ничего не произошло».
+      if (crit) hapticFeedback.notificationOccurred('success');
+      else hapticFeedback.impactOccurred('light');
     } catch {
       // хептика недоступна вне Telegram — игнорируем
     }
@@ -290,6 +297,8 @@ export const App: FC = () => {
             pending={factoryPending}
             onCollect={collectFactory}
             loading={!factoriesLoaded}
+            coinsPerTap={coinsPerTap}
+            ratePerHour={factoryRatePerHour}
           />
         )}
 

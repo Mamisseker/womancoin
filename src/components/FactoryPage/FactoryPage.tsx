@@ -1,36 +1,41 @@
 /**
- * Вкладка «Завод»: карусель своих заводов и сбор продукции.
+ * Вкладка «Завод»: список своих заводов и сбор накопленного дохода.
  *
- * Заводы вынесены в горизонтальную ленту не ради экономики, а ради
- * будущего: игрок листает по своим заводам, и когда их станет больше
- * трёх, лента просто продолжится, а не переедет в новую вёрстку.
+ * Заводы — постоянные усиления, а не источник продукции: их бонусы
+ * уже учтены в доходе за клик, в скорости автокликера и в шансе крита,
+ * и вкладка просто показывает, что именно каждый из них добавляет.
  *
- * Продукция копится сама, пока игрок не забирает её зелёной кнопкой.
- * Кнопка загорается ярко-зелёным, когда есть что забирать, и на ней
- * видно, сколько именно накопилось.
+ * Список вертикальный и прокручивается вниз — заводов станет больше,
+ * и они должны добавляться сверху, не ломая уже привычную картинку.
+ * Зелёная кнопка сбора закреплена снизу и не уезжает при прокрутке.
  */
 
 import { hapticFeedback } from '@tma.js/sdk-react';
 import { motion } from 'framer-motion';
 import type { FC } from 'react';
 
-import { FACTORIES, type FactoryDef } from '@/hooks/useFactories.ts';
+import { FACTORIES, getAutoclickIntervalMs, type FactoryDef } from '@/lib/factories.ts';
 import { formatTokens } from '@/lib/units.ts';
 
-const CARD_WIDTH = 148;
-const CARD_HEIGHT = 190;
-/** Ширина зелёной кнопки совпадает с шириной карточки завода. */
-const COLLECT_WIDTH = CARD_WIDTH;
-
 interface FactoryPageProps {
-  /** Накопленная продукция, микро-единицы. */
+  /** Накопленный доход автокликера, микро-единицы. */
   pending: number;
   onCollect: () => void;
-  /** Заводы ещё считаются (первая загрузка) — кнопку держим неактивной. */
+  /** Ещё идёт первая загрузка сохранения — кнопку держим неактивной. */
   loading?: boolean;
+  /** Доход за клик, уже с учётом заводов, микро-единицы. */
+  coinsPerTap: number;
+  /** Доход автокликера за час, микро-единицы. */
+  ratePerHour: number;
 }
 
-export const FactoryPage: FC<FactoryPageProps> = ({ pending, onCollect, loading }) => {
+export const FactoryPage: FC<FactoryPageProps> = ({
+  pending,
+  onCollect,
+  loading,
+  coinsPerTap,
+  ratePerHour,
+}) => {
   const hasLoot = pending > 0;
 
   const handleCollect = () => {
@@ -49,15 +54,14 @@ export const FactoryPage: FC<FactoryPageProps> = ({ pending, onCollect, loading 
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        gap: 18,
-        paddingTop: 20,
-        paddingBottom: 24,
+        gap: 12,
+        paddingTop: 16,
+        minHeight: 0,
         position: 'relative',
         zIndex: 1,
       }}
     >
-      {/* Заголовок */}
-      <div style={{ paddingLeft: 20, paddingRight: 20 }}>
+      <div style={{ paddingLeft: 20, paddingRight: 20, flexShrink: 0 }}>
         <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--wc-text)' }}>
           Мои заводы
         </div>
@@ -69,66 +73,38 @@ export const FactoryPage: FC<FactoryPageProps> = ({ pending, onCollect, loading 
             marginTop: 3,
           }}
         >
-          Листай, чтобы посмотреть все. Продукция копится сама.
+          Работают всегда. Доход идёт в счёт и ждёт сбора.
         </div>
       </div>
 
-      {/* Лента заводов */}
+      {/* Прокручиваемый вниз список заводов */}
       <div
         style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
           display: 'flex',
-          gap: 12,
+          flexDirection: 'column',
+          gap: 10,
           paddingLeft: 20,
           paddingRight: 20,
-          overflowX: 'auto',
-          overflowY: 'hidden',
-          scrollSnapType: 'x mandatory',
-          WebkitOverflowScrolling: 'touch',
-          scrollbarWidth: 'none',
+          paddingBottom: 8,
         }}
       >
         {FACTORIES.map((def) => (
           <FactoryCard key={def.id} def={def} />
         ))}
-
-        {/* Заглушка будущих заводов: видно, что лента продолжится */}
-        <div
-          style={{
-            width: CARD_WIDTH,
-            height: CARD_HEIGHT,
-            flexShrink: 0,
-            borderRadius: 'var(--wc-radius-m)',
-            border: '1px dashed var(--wc-separator)',
-            background: 'transparent',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            color: 'var(--wc-text-3)',
-          }}
-        >
-          <span style={{ fontSize: 26, lineHeight: 1, opacity: 0.6 }}>＋</span>
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              textAlign: 'center',
-              padding: '0 10px',
-              lineHeight: 1.3,
-            }}
-          >
-            Скоро новый завод
-          </span>
-        </div>
       </div>
 
-      {/* Приёмник продукции */}
-      <div style={{ paddingLeft: 20, paddingRight: 20 }}>
+      {/* Приёмник дохода — закреплён снизу, шириной во всю ленту карточек */}
+      <div style={{ paddingLeft: 20, paddingRight: 20, paddingBottom: 8, flexShrink: 0 }}>
         <CollectButton
           pending={pending}
           active={hasLoot}
           disabled={loading}
+          ratePerHour={ratePerHour}
+          coinsPerTap={coinsPerTap}
           onClick={handleCollect}
         />
       </div>
@@ -144,44 +120,33 @@ const FactoryCard: FC<FactoryCardProps> = ({ def }) => {
   return (
     <div
       style={{
-        width: CARD_WIDTH,
-        height: CARD_HEIGHT,
-        flexShrink: 0,
-        scrollSnapAlign: 'start',
         display: 'flex',
-        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 12,
+        padding: 10,
         background: 'var(--wc-surface)',
         border: '1px solid var(--wc-separator)',
         borderRadius: 'var(--wc-radius-m)',
-        overflow: 'hidden',
         boxShadow: 'var(--wc-shadow-1)',
+        flexShrink: 0,
       }}
     >
       <img
         src={def.image}
         alt={def.title}
         style={{
-          width: '100%',
-          height: 118,
-          objectFit: 'cover',
+          width: 62,
+          height: 62,
+          borderRadius: 'var(--wc-radius-s)',
           display: 'block',
           pointerEvents: 'none',
           userSelect: 'none',
         }}
       />
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          gap: 2,
-          padding: '10px 12px',
-        }}
-      >
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: 700,
             color: 'var(--wc-text)',
             lineHeight: 1.2,
@@ -189,21 +154,33 @@ const FactoryCard: FC<FactoryCardProps> = ({ def }) => {
         >
           {def.title}
         </div>
-        <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--wc-text-3)' }}>
-          {def.detail}
-        </div>
         <div
           style={{
             fontSize: 12,
-            fontWeight: 800,
+            fontWeight: 600,
             color: 'var(--wc-accent)',
-            fontVariantNumeric: 'tabular-nums',
             marginTop: 3,
+            lineHeight: 1.25,
           }}
         >
-          +{formatTokens(def.ratePerHour)} /час
+          {def.effect}
         </div>
       </div>
+      <span
+        style={{
+          fontSize: 10,
+          fontWeight: 800,
+          letterSpacing: 1,
+          textTransform: 'uppercase',
+          color: 'var(--wc-text-3)',
+          background: 'var(--wc-surface-2)',
+          borderRadius: 100,
+          padding: '5px 8px',
+          flexShrink: 0,
+        }}
+      >
+        Работает
+      </span>
     </div>
   );
 };
@@ -212,33 +189,42 @@ interface CollectButtonProps {
   pending: number;
   active: boolean;
   disabled?: boolean;
+  ratePerHour: number;
+  coinsPerTap: number;
   onClick: () => void;
 }
 
 /**
- * Зелёная кнопка приёма продукции.
+ * Зелёная кнопка сбора накопленного.
  *
- * Ширина совпадает с карточкой завода. Когда продукция есть, кнопка
- * горит ярко-зелёным и слегка пульсирует, чтобы её было видно с
- * противоположного конца экрана; на ней же написано, сколько накопилось.
- * Одно нажатие переводит всё на счёт.
+ * Ширина совпадает с шириной карточек завода. Когда есть что забирать,
+ * кнопка горит ярко-зелёным и слегка пульсирует, а на ней написано,
+ * сколько именно накопилось; одно нажатие переводит всё на счёт.
  */
-const CollectButton: FC<CollectButtonProps> = ({ pending, active, disabled, onClick }) => {
+const CollectButton: FC<CollectButtonProps> = ({
+  pending,
+  active,
+  disabled,
+  ratePerHour,
+  coinsPerTap,
+  onClick,
+}) => {
+  const perClick = autoclickLabel(coinsPerTap);
+
   return (
     <motion.button
       type="button"
       onClick={onClick}
       disabled={!active || disabled}
-      animate={active ? { scale: [1, 1.025, 1] } : { scale: 1 }}
+      animate={active ? { scale: [1, 1.02, 1] } : { scale: 1 }}
       transition={
         active
           ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' }
           : { duration: 0.2 }
       }
-      whileTap={active ? { scale: 0.96 } : undefined}
+      whileTap={active ? { scale: 0.97 } : undefined}
       style={{
-        width: COLLECT_WIDTH,
-        maxWidth: '100%',
+        width: '100%',
         padding: '12px 14px',
         borderRadius: 'var(--wc-radius-m)',
         border: '1px solid rgba(255, 255, 255, 0.16)',
@@ -250,7 +236,6 @@ const CollectButton: FC<CollectButtonProps> = ({ pending, active, disabled, onCl
         cursor: active && !disabled ? 'pointer' : 'not-allowed',
         textAlign: 'left',
         WebkitTapHighlightColor: 'transparent',
-        // Ярко-зелёный, когда есть продукция; спокойный зелёный, когда пусто.
         background: active
           ? 'linear-gradient(135deg, #2ee66b 0%, #12b355 100%)'
           : 'linear-gradient(135deg, rgba(46, 230, 107, 0.16) 0%, rgba(18, 179, 85, 0.12) 100%)',
@@ -262,7 +247,7 @@ const CollectButton: FC<CollectButtonProps> = ({ pending, active, disabled, onCl
       }}
     >
       <span style={{ fontSize: 13, fontWeight: 800, lineHeight: 1.2 }}>
-        {active ? 'Забрать продукцию' : 'Продукция копится'}
+        {active ? 'Забрать на счёт' : 'Копится автоматически'}
       </span>
       <span
         style={{
@@ -274,9 +259,15 @@ const CollectButton: FC<CollectButtonProps> = ({ pending, active, disabled, onCl
         }}
       >
         {active
-          ? `+${formatTokens(pending)} на счёт`
-          : `Заводы работают · ${formatTokens(3300)} /час`}
+          ? `+${formatTokens(pending)} на баланс`
+          : `${formatTokens(ratePerHour)} /час · ${perClick}`}
       </span>
     </motion.button>
   );
+};
+
+/** Подпись «раз в 999 мс» под кнопкой, когда копить нечего. */
+const autoclickLabel = (coinsPerTap: number): string => {
+  const interval = Math.round(getAutoclickIntervalMs());
+  return `${coinsPerTap} микро за клик · раз в ${interval} мс`;
 };
