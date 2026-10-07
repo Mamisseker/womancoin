@@ -1,13 +1,15 @@
 /**
  * Вкладка «Завод»: список заводов, их производство и сбор улучшений.
  *
- * Вертикальный список, который прокручивается вниз: заводов станет
- * больше, и новые должны добавляться сверху, не ломая привычную
- * картинку. Каждая карточка живёт сама по себе — покупается, крутит
- * свой КД, показывает склад и даёт кнопку «Забрать».
+ * С первого взгляда должно быть понятно три вещи: что у меня уже
+ * работает, что можно купить, и когда можно забрать улучшение. Поэтому
+ * список разбит на две секции, лишние подписи сняты (уровень живёт
+ * компактным бейджем, склад — точками), а сверху показаны только те
+ * статы, которые действительно отличаются от базовых: семь одинаковых
+ * чипов читались как шум.
  *
- * Общей зелёной кнопки сбора больше нет: доход автокликера уходит на
- * баланс сам, а здесь игрок забирает именно улучшения, каждое отдельно.
+ * Общей зелёной кнопки сбора нет: доход автокликера уходит на баланс
+ * сам, а здесь игрок забирает именно улучшения, каждое отдельно.
  */
 
 import { hapticFeedback } from '@tma.js/sdk-react';
@@ -52,9 +54,10 @@ export const FactoryPage: FC<FactoryPageProps> = ({
     return () => window.clearTimeout(id);
   }, [toast]);
 
-  const notify = (message: string) => {
+  const notify = (message: string, rare = false) => {
     try {
-      hapticFeedback.impactOccurred('medium');
+      if (rare) hapticFeedback.notificationOccurred('success');
+      else hapticFeedback.impactOccurred('medium');
     } catch {
       // хептика недоступна вне Telegram — игнорируем
     }
@@ -63,11 +66,6 @@ export const FactoryPage: FC<FactoryPageProps> = ({
 
   const handleBuy = (def: FactoryDef, cost: number) => {
     if (coins < cost) return;
-    try {
-      hapticFeedback.impactOccurred('medium');
-    } catch {
-      // хептика недоступна вне Telegram — игнорируем
-    }
     if (buy(def.id)) notify(`${def.title} куплен`);
   };
 
@@ -75,13 +73,27 @@ export const FactoryPage: FC<FactoryPageProps> = ({
     const result = collect(def.id);
     if (!result || result.count <= 0) return;
     const label = RARE_EFFECT_LABELS[result.kind];
-    notify(result.rare ? `РЕДКОЕ ×5 · ${label}` : `+${result.count} · ${label}`);
-    try {
-      if (result.rare) hapticFeedback.notificationOccurred('success');
-      else hapticFeedback.impactOccurred('light');
-    } catch {
-      // хептика недоступна вне Telegram — игнорируем
-    }
+    notify(result.rare ? `РЕДКОЕ ×5 · ${label}` : `+${result.count} · ${label}`, result.rare);
+  };
+
+  // Делим на два списка: уже работающие заводы и то, что можно купить.
+  // Смешанные в одну кучу карточки заставляют искать свои глазами.
+  const working = FACTORIES.filter((def) => progressOf(def.id)?.owned);
+  const available = FACTORIES.filter((def) => !progressOf(def.id)?.owned);
+
+  const renderCard = (def: FactoryDef) => {
+    const progress = progressOf(def.id);
+    if (!progress) return null;
+    return (
+      <FactoryCard
+        key={def.id}
+        def={def}
+        progress={progress}
+        coins={coins}
+        onBuy={() => handleBuy(def, progress.cost)}
+        onCollect={() => handleCollect(def)}
+      />
+    );
   };
 
   return (
@@ -107,9 +119,10 @@ export const FactoryPage: FC<FactoryPageProps> = ({
             fontWeight: 500,
             color: 'var(--wc-text-2)',
             marginTop: 3,
+            lineHeight: 1.35,
           }}
         >
-          Каждый раз в КД кладёт улучшение на склад. Забирай — усиливает навсегда.
+          Заводы сами готовят улучшения. Забирай — и бонус остаётся навсегда.
         </div>
 
         <StatRow bonuses={bonuses} ratePerHour={ratePerHour} />
@@ -148,39 +161,50 @@ export const FactoryPage: FC<FactoryPageProps> = ({
           paddingBottom: 16,
         }}
       >
-        {FACTORIES.map((def) => {
-          const progress = progressOf(def.id);
-          if (!progress) return null;
-          return (
-            <FactoryCard
-              key={def.id}
-              def={def}
-              progress={progress}
-              coins={coins}
-              onBuy={() => handleBuy(def, progress.cost)}
-              onCollect={() => handleCollect(def)}
-            />
-          );
-        })}
+        {working.length > 0 && <SectionTitle>Работают</SectionTitle>}
+        {working.map(renderCard)}
+
+        {available.length > 0 && <SectionTitle>Купить</SectionTitle>}
+        {available.map(renderCard)}
       </div>
     </div>
   );
 };
 
-/** Сводка по главным статам — чтобы стратегию было видно одним взглядом. */
+const SectionTitle: FC<{ children: ReactNode }> = ({ children }) => (
+  <div
+    style={{
+      fontSize: 11,
+      fontWeight: 800,
+      letterSpacing: 1.2,
+      textTransform: 'uppercase',
+      color: 'var(--wc-text-3)',
+      marginTop: 4,
+    }}
+  >
+    {children}
+  </div>
+);
+
+/**
+ * Сводка по главным статам.
+ *
+ * Показываем только то, чем стат отличается от базового: по умолчанию
+ * игрок видит три понятные цифры, а не семь подписей с множителями
+ * «×1.00», которые к тому моменту ничего не значат.
+ */
 const StatRow: FC<{ bonuses: FactoryBonuses; ratePerHour: number }> = ({
   bonuses,
   ratePerHour,
 }) => {
-  const items = [
-    `Клик +${formatTokens(bonuses.tapBonusMicro)}`,
-    `Крит ${(bonuses.critChanceBps / 100).toFixed(1)}%`,
-    `Авто ×${bonuses.autoclickClicks}`,
-    `${formatTokens(ratePerHour)}/час`,
-    `Улучшения ×${bonuses.effMult.toFixed(2)}`,
-    `Качество ×${bonuses.qualityMult.toFixed(2)}`,
-    `КД −${(bonuses.cooldownMs / 1000).toFixed(1)} сек`,
-  ];
+  const items: string[] = [];
+  if (bonuses.tapBonusMicro > 0) items.push(`Клик +${formatTokens(bonuses.tapBonusMicro)}`);
+  if (bonuses.critChanceBps > 0) items.push(`Крит ${(bonuses.critChanceBps / 100).toFixed(1)}%`);
+  items.push(`${formatTokens(ratePerHour)}/час`);
+  if (bonuses.autoclickClicks > 1) items.push(`Авто ×${bonuses.autoclickClicks}`);
+  if (bonuses.effMult > 1) items.push(`Улучшения ×${bonuses.effMult.toFixed(2)}`);
+  if (bonuses.qualityMult > 1) items.push(`Качество ×${bonuses.qualityMult.toFixed(2)}`);
+  if (bonuses.cooldownMs > 0) items.push(`КД −${Math.round(bonuses.cooldownMs / 1000)} сек`);
   if (bonuses.spaceMult > 1) items.push('🚀 ×2 к кликам');
 
   return (
@@ -221,9 +245,8 @@ const FactoryCard: FC<FactoryCardProps> = ({
   onBuy,
   onCollect,
 }) => {
-  const { owned, level, cost, stock, waitMs, ready, full, cycleMs } = progress;
+  const { owned, level, cost, stock, waitMs, full, cycleMs } = progress;
   const secondsLeft = Math.ceil(waitMs / 1000);
-  // Прогресс полосы: сколько уже прошло от цикла производства.
   const progressPercent =
     owned && !full && cycleMs > 0 ? Math.min(100, ((cycleMs - waitMs) / cycleMs) * 100) : 0;
   const affordable = coins >= cost;
@@ -233,25 +256,31 @@ const FactoryCard: FC<FactoryCardProps> = ({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 8,
-        padding: 10,
+        gap: 9,
+        padding: 11,
         background: 'var(--wc-surface)',
-        border: '1px solid var(--wc-separator)',
+        // Когда на складе лежит улучшение, рамка подсвечивается: глаз
+        // сразу находит карточки, по которым есть что забирать.
+        border:
+          stock > 0
+            ? '1px solid rgba(46, 230, 107, 0.55)'
+            : '1px solid var(--wc-separator)',
+        boxShadow: stock > 0 ? '0 0 16px rgba(46, 230, 107, 0.22)' : 'var(--wc-shadow-1)',
         borderRadius: 'var(--wc-radius-m)',
-        boxShadow: 'var(--wc-shadow-1)',
         flexShrink: 0,
-        // Некупленный завод приглушён, чтобы в списке из десяти сразу
-        // читалось, что реально работает, а что ещё не куплено.
-        opacity: owned ? 1 : 0.68,
+        // Некупленный завод приглушён: в списке из десяти сразу видно,
+        // что реально работает, а что ещё не куплено.
+        opacity: owned ? 1 : 0.72,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      {/* Шапка: картинка, название, эффект и цена */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
         <img
           src={def.image}
-          alt={def.title}
+          alt=""
           style={{
-            width: 54,
-            height: 54,
+            width: 52,
+            height: 52,
             borderRadius: 'var(--wc-radius-s)',
             display: 'block',
             pointerEvents: 'none',
@@ -260,160 +289,196 @@ const FactoryCard: FC<FactoryCardProps> = ({
           }}
         />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: 'var(--wc-text)',
-              lineHeight: 1.2,
-            }}
-          >
-            {def.title}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: 'var(--wc-text)',
+                lineHeight: 1.2,
+              }}
+            >
+              {def.title}
+            </span>
+            {owned && (
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  color: 'var(--wc-accent)',
+                  background: 'rgba(255, 184, 0, 0.14)',
+                  border: '1px solid rgba(255, 184, 0, 0.3)',
+                  borderRadius: 100,
+                  padding: '2px 6px',
+                  flexShrink: 0,
+                }}
+              >
+                ур. {level}
+              </span>
+            )}
           </div>
           <div
             style={{
               fontSize: 12,
               fontWeight: 600,
               color: 'var(--wc-accent)',
-              marginTop: 3,
-              lineHeight: 1.25,
+              marginTop: 4,
+              lineHeight: 1.3,
             }}
           >
             {def.effectText}
           </div>
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: 'var(--wc-text-3)',
-              marginTop: 3,
-            }}
-          >
-            {owned ? `Уровень ${level} · собрано ${stock} из ${MAX_STOCK}` : 'Не куплен'}
-          </div>
         </div>
       </div>
 
-      {/* Склад: сколько улучшений ждёт забора */}
+      {/* У купленных заводов: склад точками и полоса готовности */}
       {owned && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ display: 'flex', gap: 4, flex: 1 }}>
-            {Array.from({ length: MAX_STOCK }, (_, i) => (
-              <div
-                key={i}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 4, flex: 1 }}>
+              {Array.from({ length: MAX_STOCK }, (_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    flex: 1,
+                    height: 7,
+                    borderRadius: 100,
+                    background:
+                      i < stock
+                        ? 'linear-gradient(90deg, #2ee66b, #12b355)'
+                        : 'var(--wc-surface-2)',
+                  }}
+                />
+              ))}
+            </div>
+            {full && (
+              <span
                 style={{
-                  flex: 1,
-                  height: 6,
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: '#7dffb0',
+                  flexShrink: 0,
+                }}
+              >
+                склад полон
+              </span>
+            )}
+          </div>
+
+          {stock < MAX_STOCK && (
+            <div
+              style={{
+                height: 4,
+                borderRadius: 100,
+                background: 'var(--wc-surface-2)',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  width: `${progressPercent}%`,
+                  height: '100%',
                   borderRadius: 100,
-                  background:
-                    i < stock ? 'linear-gradient(90deg, #2ee66b, #12b355)' : 'var(--wc-surface-2)',
+                  background: 'linear-gradient(90deg, var(--wc-accent), var(--wc-accent-2))',
+                  transition: 'width 0.5s linear',
                 }}
               />
-            ))}
-          </div>
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              color: full ? '#7dffb0' : 'var(--wc-text-3)',
-              fontVariantNumeric: 'tabular-nums',
-            }}
-          >
-            {full ? 'склад полон' : `${Math.ceil(cycleMs / 1000)} сек / шт`}
-          </span>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Полоса готовности следующего улучшения */}
-      {owned && !full && (
-        <div
-          style={{
-            height: 4,
-            borderRadius: 100,
-            background: 'var(--wc-surface-2)',
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              width: `${progressPercent}%`,
-              height: '100%',
-              borderRadius: 100,
-              background: 'linear-gradient(90deg, var(--wc-accent), var(--wc-accent-2))',
-              transition: 'width 0.5s linear',
-            }}
-          />
-        </div>
-      )}
-
-      {/* Действия: покупка / улучшение / сбор */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        {ready && (
+      {/* Действия: сбор/ожидание и покупка/улучшение */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: owned ? 'row' : 'column',
+          gap: 8,
+        }}
+      >
+        {owned && stock > 0 && (
           <ActionButton onClick={onCollect} variant="collect">
-            Забрать улучшение
+            Забрать +{stock}
           </ActionButton>
         )}
-        {!ready && owned && !full && (
+        {owned && stock === 0 && (
           <ActionButton onClick={undefined} variant="wait">
-            Готовится · {secondsLeft} сек
-          </ActionButton>
-        )}
-        {!ready && owned && full && (
-          <ActionButton onClick={onCollect} variant="collect">
-            Склад полон · забрать {stock}
+            Ещё {secondsLeft} сек
           </ActionButton>
         )}
         <ActionButton
           onClick={onBuy}
           variant={owned ? 'upgrade' : 'buy'}
           disabled={!affordable}
+          affordable={affordable}
         >
-          {owned ? `Улучшить · ${formatTokens(cost)}` : `Купить · ${formatTokens(cost)}`}
+          {affordable
+            ? `${owned ? 'Улучшить' : 'Купить'} · ${formatTokens(cost)}`
+            : 'Не хватает денег'}
         </ActionButton>
       </div>
     </div>
   );
 };
 
+interface ButtonLook {
+  background: string;
+  color: string;
+  boxShadow: string;
+  border: string;
+}
+
+/** Серый: ничего не просит внимания и не выглядит доступным. */
+const IDLE: ButtonLook = {
+  background: 'var(--wc-surface-2)',
+  color: 'var(--wc-text-3)',
+  boxShadow: 'none',
+  border: '1px solid var(--wc-separator)',
+};
+
+/** Оранжево-жёлтая сияющая — когда покупка или улучшение доступны. */
+const GLOW: ButtonLook = {
+  background: 'linear-gradient(135deg, #ffe07a 0%, #ffb800 45%, #ff8a00 100%)',
+  color: '#1a1200',
+  boxShadow: '0 8px 22px rgba(255, 184, 0, 0.5), 0 0 0 1px rgba(255, 224, 122, 0.45)',
+  border: '1px solid rgba(255, 255, 255, 0.2)',
+};
+
 interface ActionButtonProps {
   onClick?: () => void;
   variant: 'collect' | 'buy' | 'upgrade' | 'wait';
   disabled?: boolean;
+  /** Хватает ли денег: меняет ценовую кнопку с оранжевой на серую. */
+  affordable?: boolean;
   children: ReactNode;
 }
 
-const ActionButton: FC<ActionButtonProps> = ({ onClick, variant, disabled, children }) => {
-  const styles: Record<
-    ActionButtonProps['variant'],
-    { background: string; color: string; boxShadow: string; border: string }
-  > = {
+const ActionButton: FC<ActionButtonProps> = ({
+  onClick,
+  variant,
+  disabled,
+  affordable = true,
+  children,
+}) => {
+  // Цена и улучшение живут по одному правилу: серы, пока денег не
+  // хватает, и загораются оранжево-жёлтым, как только хватает.
+  const isPrice = variant === 'buy' || variant === 'upgrade';
+  const styles: Record<ActionButtonProps['variant'], ButtonLook> = {
     collect: {
       background: 'linear-gradient(135deg, #2ee66b 0%, #12b355 100%)',
       color: '#04180c',
       boxShadow: '0 8px 20px rgba(46, 230, 107, 0.4)',
       border: '1px solid rgba(255, 255, 255, 0.16)',
     },
-    buy: {
-      background: 'linear-gradient(135deg, var(--wc-accent), var(--wc-accent-2))',
-      color: '#1a1200',
-      boxShadow: '0 8px 20px rgba(255, 184, 0, 0.28)',
-      border: '1px solid rgba(255, 255, 255, 0.14)',
-    },
-    upgrade: {
-      background: 'var(--wc-surface-2)',
-      color: 'var(--wc-accent)',
-      boxShadow: 'none',
-      border: '1px solid var(--wc-separator)',
-    },
-    wait: {
-      background: 'var(--wc-surface-2)',
-      color: 'var(--wc-text-3)',
-      boxShadow: 'none',
-      border: '1px solid var(--wc-separator)',
-    },
+    buy: affordable ? GLOW : IDLE,
+    upgrade: affordable ? GLOW : IDLE,
+    wait: IDLE,
   };
 
   const look = styles[variant];
+  // Серую ценовую кнопку не притемняем: она и так выключена, а
+  // потеря контраста сделала бы надпись «Не хватает денег» нечитаемой.
+  const opacity = isPrice && !affordable ? 1 : disabled ? 0.55 : 1;
 
   return (
     <button
@@ -433,9 +498,10 @@ const ActionButton: FC<ActionButtonProps> = ({ onClick, variant, disabled, child
         fontWeight: 800,
         lineHeight: 1.2,
         cursor: disabled || !onClick ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.55 : 1,
+        opacity,
         WebkitTapHighlightColor: 'transparent',
         textAlign: 'center',
+        whiteSpace: 'nowrap',
       }}
     >
       {children}
