@@ -1,10 +1,11 @@
 import { AppRoot } from '@telegram-apps/telegram-ui';
 import { hapticFeedback } from '@tma.js/sdk-react';
-import { useCallback, useEffect, useState, type FC } from 'react';
+import { useCallback, useEffect, useRef, useState, type FC } from 'react';
 
 import { BottomNav } from '@/components/BottomNav/BottomNav.tsx';
 import { FactoryPage } from '@/components/FactoryPage/FactoryPage.tsx';
 import { useAutoclicker } from '@/hooks/useAutoclicker.ts';
+import { useFactories } from '@/hooks/useFactories.ts';
 import { FriendsPage } from '@/components/FriendsPage/FriendsPage.tsx';
 import { GenderSelect } from '@/components/GenderSelect/GenderSelect.tsx';
 import { StatsPage } from '@/components/StatsPage/StatsPage.tsx';
@@ -31,15 +32,33 @@ export const App: FC = () => {
 
   const { gender, setGender, ready } = useGender();
   const { states: boostStates, now: boostNow, activate, isWorking } = useBoosts();
-  const { coins, energy, tap, addCoins, coinsPerTap, maxEnergy, claimJackpot } =
-    useProgress({ turboTap: isWorking('turboTap'), regen: isWorking('regen') });
 
-  const {
-    pending: factoryPending,
-    collect: collectFactory,
-    loaded: factoriesLoaded,
-    ratePerHour: factoryRatePerHour,
-  } = useAutoclicker(coinsPerTap, addCoins);
+  // Заводы вызывают списание и зачисление ещё ДО создания useProgress,
+  // поэтому держим их через ref: к моменту первой покупки или загрузки
+  // он уже заполнен, а порядок хуков остаётся стабильным.
+  const actionsRef = useRef<{ spend: (n: number) => boolean; add: (n: number) => void }>({
+    spend: () => false,
+    add: () => undefined,
+  });
+
+  const factories = useFactories(
+    (amount) => actionsRef.current.spend(amount),
+    (amount) => actionsRef.current.add(amount),
+  );
+
+  const { coins, energy, tap, addCoins, spendCoins, coinsPerTap, maxEnergy, claimJackpot } =
+    useProgress(
+      { turboTap: isWorking('turboTap'), regen: isWorking('regen') },
+      factories.bonuses,
+    );
+
+  actionsRef.current = { spend: spendCoins, add: addCoins };
+
+  const { ratePerHour: factoryRatePerHour } = useAutoclicker(
+    factories.bonuses,
+    coinsPerTap,
+    addCoins,
+  );
   const { referralLink, invitedBy, bonus, claimBonus, usingTelegram, demoStats } =
     useReferral();
   const [tab, setTab] = useState('tap');
@@ -294,11 +313,12 @@ export const App: FC = () => {
 
         {tab === 'boost' && (
           <FactoryPage
-            pending={factoryPending}
-            onCollect={collectFactory}
-            loading={!factoriesLoaded}
-            coinsPerTap={coinsPerTap}
+            coins={coins}
+            bonuses={factories.bonuses}
             ratePerHour={factoryRatePerHour}
+            buy={factories.buy}
+            collect={factories.collect}
+            progressOf={factories.progressOf}
           />
         )}
 

@@ -7,7 +7,7 @@ import {
   type ProgressState,
 } from '@/lib/progressStorage.ts';
 import { MICRO_PER_TAP } from '@/lib/units.ts';
-import { FACTORY_TAP_BONUS_MICRO, CRIT_MULTIPLIER, getCritChanceBps, rollCrit } from '@/lib/factories.ts';
+import { CRIT_MULTIPLIER, rollCrit, type FactoryBonuses } from '@/lib/factories.ts';
 import { JACKPOT_MICRO, REGEN_MULTIPLIER, TURBO_TAP_MULTIPLIER } from '@/lib/boosts.ts';
 
 const BASE_MAX_ENERGY = 1000;
@@ -109,7 +109,10 @@ const initialLevels = (): Record<UpgradeId, number> => ({
  * Монеты, энергия и уровни скиллов сохраняются на серверах Telegram,
  * поэтому прогресс не сбрасывается между сессиями.
  */
-export const useProgress = (boosts?: { turboTap: boolean; regen: boolean }) => {
+export const useProgress = (
+  boosts?: { turboTap: boolean; regen: boolean },
+  factory?: FactoryBonuses,
+) => {
   const [coins, setCoins] = useState(0);
   const [energy, setEnergy] = useState(BASE_MAX_ENERGY);
   const [levels, setLevels] = useState<Record<UpgradeId, number>>(initialLevels);
@@ -131,9 +134,9 @@ export const useProgress = (boosts?: { turboTap: boolean; regen: boolean }) => {
   const regenBoost = boosts?.regen ?? false;
 
   // Производные значения прокачек.
-  // Заводская прибавка складывается ДО буста «Турбо»: буст умножает
-  // весь доход за клик целиком, включая то, что дали заводы.
-  const baseCoinsPerTap = getCoinsPerTap(levels.damage) + FACTORY_TAP_BONUS_MICRO;
+  // Заводская прибавка складывается ДО бустов «Турбо» и аэрокосмического:
+  // бусты должны умножать весь доход за клик целиком, включая заводы.
+  const baseCoinsPerTap = getCoinsPerTap(levels.damage) + (factory?.tapBonusMicro ?? 0);
   const coinsPerTap = turboTap ? baseCoinsPerTap * TURBO_TAP_MULTIPLIER : baseCoinsPerTap;
   const maxEnergy = getMaxEnergy(levels.energy);
   const regenMs = getRegenMs(levels.regen);
@@ -142,7 +145,7 @@ export const useProgress = (boosts?: { turboTap: boolean; regen: boolean }) => {
   const regenIntervalMs = regenBoost
     ? Math.max(200, Math.round(regenMs / REGEN_MULTIPLIER))
     : regenMs;
-  const passivePerHour = getPassivePerHour(levels.passive);
+  const passivePerHour = Math.round(getPassivePerHour(levels.passive) * (factory?.passiveMult ?? 1));
   const upgradeCost = (id: UpgradeId): number => {
     const def = UPGRADES.find((u) => u.id === id);
     return def ? getCost(def, levels[id]) : 0;
@@ -308,12 +311,15 @@ export const useProgress = (boosts?: { turboTap: boolean; regen: boolean }) => {
   }, [coins, energy, levels, taps, save]);
 
   const tap = useCallback((): TapResult => {
-    const base = getCoinsPerTap(levelsRef.current.damage) + FACTORY_TAP_BONUS_MICRO;
-    const gain = turboTapRef.current ? base * TURBO_TAP_MULTIPLIER : base;
-    // Шанс крита задаёт Химический завод. Бросок идёт по целым
-    // бейсис-поинтам: сравнение с долей от Math.random() округляло бы
-    // 0.5% вниз до «никогда».
-    const crit = rollCrit(getCritChanceBps(), Math.floor(Math.random() * 10_000));
+    const bonuses = factoryRef.current;
+    const base = getCoinsPerTap(levelsRef.current.damage) + (bonuses?.tapBonusMicro ?? 0);
+    // ×2 от Аэрокосмического завода умножается, а не прибавляется: к
+    // 0.0003 токена прибавка была бы незаметной уже с первого улучшения.
+    const gain =
+      base *
+      (turboTapRef.current ? TURBO_TAP_MULTIPLIER : 1) *
+      (bonuses?.spaceMult ?? 1);
+    const crit = rollCrit(bonuses?.critChanceBps ?? 0, Math.floor(Math.random() * 10_000));
     const amount = crit ? gain * CRIT_MULTIPLIER : gain;
     setCoins((c) => c + amount);
     setEnergy((e) => Math.max(0, e - 1));
@@ -324,6 +330,10 @@ export const useProgress = (boosts?: { turboTap: boolean; regen: boolean }) => {
   // Отдельные ref'ы: колбэк тапа не должен пересоздаваться каждый тик буста.
   const turboTapRef = useRef(turboTap);
   turboTapRef.current = turboTap;
+  // Заводы меняются только сбором улучшений, но тап зовётся каждый
+  // клик — держим их в ref, чтобы не пересоздавать колбэк.
+  const factoryRef = useRef(factory);
+  factoryRef.current = factory;
 
   /** Разово выдать выплату буста и показать, что сработало. */
   const claimJackpot = useCallback((): number => {
@@ -334,6 +344,20 @@ export const useProgress = (boosts?: { turboTap: boolean; regen: boolean }) => {
 
   const addCoins = useCallback((amount: number) => {
     setCoins((c) => c + amount);
+  }, []);
+
+  /**
+   * Списывает деньги за покупку одним проверенным действием.
+   *
+   * Проверка идёт по stateRef, а не по state в замыкании: иначе два
+   * быстрых клика по заводу могли бы увести баланс в минус.
+   */
+  const spendCoins = useCallback((amount: number): boolean => {
+    if (amount <= 0 || stateRef.current.coins < amount) return false;
+    const next = stateRef.current.coins - amount;
+    stateRef.current = { ...stateRef.current, coins: next };
+    setCoins(next);
+    return true;
   }, []);
 
   const buyUpgrade = useCallback((id: UpgradeId): boolean => {
@@ -371,9 +395,11 @@ export const useProgress = (boosts?: { turboTap: boolean; regen: boolean }) => {
     tap,
     claimJackpot,
     addCoins,
+    spendCoins,
     levels,
     maxEnergy,
     coinsPerTap,
+    critChanceBps: factory?.critChanceBps ?? 0,
     regenMs,
     passivePerHour,
     upgradeCost,

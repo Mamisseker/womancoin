@@ -20,9 +20,18 @@
   <rect x="38" y="76" width="11" height="10" rx="2.5" fill="#ffb800" opacity="0.3"/>
   <rect x="12" y="102" width="104" height="5" rx="2.5" fill="#4a4a4e"/>
   
-    <path d="M82 16h12v14l11 26H71l11-26z" fill="#2a2a2c" stroke="url(#a)" stroke-width="3"
-          stroke-linejoin="round"/>
-    <path d="M75 44h26l6 12H69z" fill="url(#a)"/>
-    <circle cx="84" cy="40" r="3" fill="#1c1c1e" opacity="0.35"/>
-    <circle cx="93" cy="47" r="2.2" fill="#1c1c1e" opacity="0.35"/>
+    <g fill="url(#a)">
+      <circle cx="88" cy="34" r="15"/>
+      <g fill="url(#a)">
+        <rect x="85" y="14" width="6" height="7" rx="2"/>
+        <rect x="85" y="47" width="6" height="7" rx="2"/>
+        <rect x="101" y="31" width="7" height="6" rx="2"/>
+        <rect x="68" y="31" width="7" height="6" rx="2"/>
+        <rect x="99" y="18" width="6" height="7" rx="2" transform="rotate(45 102 21.5)"/>
+        <rect x="71" y="43" width="6" height="7" rx="2" transform="rotate(45 74 46.5)"/>
+        <rect x="71" y="18" width="6" height="7" rx="2" transform="rotate(-45 74 21.5)"/>
+        <rect x="99" y="43" width="6" height="7" rx="2" transform="rotate(-45 102 46.5)"/>
+      </g>
+    </g>
+    <circle cx="88" cy="34" r="6.5" fill="#2a2118"/>
 </svg>

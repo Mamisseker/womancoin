@@ -20,9 +20,9 @@
   <rect x="38" y="76" width="11" height="10" rx="2.5" fill="#ffb800" opacity="0.3"/>
   <rect x="12" y="102" width="104" height="5" rx="2.5" fill="#4a4a4e"/>
   
-    <path d="M82 16h12v14l11 26H71l11-26z" fill="#2a2a2c" stroke="url(#a)" stroke-width="3"
-          stroke-linejoin="round"/>
-    <path d="M75 44h26l6 12H69z" fill="url(#a)"/>
-    <circle cx="84" cy="40" r="3" fill="#1c1c1e" opacity="0.35"/>
-    <circle cx="93" cy="47" r="2.2" fill="#1c1c1e" opacity="0.35"/>
+    <circle cx="88" cy="34" r="17" fill="url(#a)"/>
+    <circle cx="88" cy="34" r="10" fill="none" stroke="#1a1200" stroke-width="2.4" opacity="0.65"/>
+    <rect x="83" y="27" width="10" height="2.6" rx="1.3" fill="#1a1200" opacity="0.7"/>
+    <rect x="83" y="32.7" width="10" height="2.6" rx="1.3" fill="#1a1200" opacity="0.7"/>
+    <rect x="83" y="38.4" width="10" height="2.6" rx="1.3" fill="#1a1200" opacity="0.7"/>
 </svg>

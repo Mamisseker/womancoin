@@ -1,44 +1,39 @@
 /**
- * Автокликер: сам кликает и копит доход до сбора.
+ * Автокликер: сам кликает и зачисляет доход на баланс.
  *
- * Автокликеры в игре не было — завод лишь задумывал его скорость.
- * Теперь он работает всегда, а накопленное лежит до нажатия зелёной
- * кнопки на вкладке «Завод». Копится и в офлайне, поэтому выработка
- * считается по абсолютному времени, а не по тику.
+ * Денег на сборе тут больше нет — зелёная кнопка уступила место сбору
+ * улучшений по заводам, поэтому доход уходит на счёт сам, порциями,
+ * а не копится до нажатия. Порциями, а не каждый тик: каждый сброс
+ * баланса запускает запись прогресса, и раз в полсекунды она бы
+ * превратилась в постоянную запись в хранилище.
  *
  * Округление: за секунду автокликер даёт меньше микро-единицы, поэтому
  * расчёт раз в секунду с округлением вниз всегда давал бы ноль.
- * Метка времени продвигается ровно на ту длительность, которая
- * дала выплату, а дробный остаток не теряется.
+ * Метка времени продвигается ровно на ту длительность, которая дала
+ * выплату, а дробный остаток не теряется.
  *
- * Критические клики в автокликер НЕ входят: его выработка должна быть
- * ровной и предсказуемой, а крит остаётся наградой за ручной тап.
- * Энергию автокликер не расходует — она остаётся ресурсом ручного тапа.
+ * Критические клики в автокликер не входят: его выработка должна быть
+ * ровной, а крит остаётся наградой за ручной тап. Энергию автокликер
+ * не расходует — она остаётся ресурсом ручного тапа.
  */
 
-import { cloudStorage } from '@tma.js/sdk-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
-import { getAutoclickIntervalMs } from '@/lib/factories.ts';
-
-const AUTOCLICK_KEY = 'wc_autoclicker_v1';
-const AUTOCLICK_MIRROR_KEY = 'wc_autoclicker_v1_mirror';
-/** Ключи прежней выработки заводов — нужно, чтобы не потерять накопленное. */
-const LEGACY_KEYS = ['wc_factories_v1', 'wc_factories_v1_mirror'];
+import type { FactoryBonuses } from '@/lib/factories.ts';
 
 const HOUR_MS = 3_600_000;
-/** Тик пересчёта выработки. */
-const TICK_MS = 1_000;
+/** Как часто сбрасываем накопленное на баланс, мс. */
+const FLUSH_MS = 10_000;
+/** Тик пересчёта выработки, мс. */
+const TICK_MS = 500;
 /**
  * Потолок офлайна: без него приложение, закрытое на сутки,
  * накопило бы месяц дохода.
  */
 const MAX_OFFLINE_MS = 12 * HOUR_MS;
 
-export interface AutoclickState {
-  /** Накопленный доход, микро-единицы. */
+interface AutoclickState {
   pending: number;
-  /** Метка времени, до которого доход уже посчитан (мс). */
   producedAt: number;
 }
 
@@ -47,44 +42,31 @@ interface RawAutoclickState {
   pt?: unknown;
 }
 
-const toState = (parsed: unknown): AutoclickState | null => {
-  if (typeof parsed !== 'object' || parsed === null) return null;
-  const { k, pt } = parsed as RawAutoclickState;
-  const pending = Math.floor(Number(k));
-  const producedAt = Math.floor(Number(pt));
-  if (!Number.isFinite(pending) || !Number.isFinite(producedAt)) return null;
-  return { pending: Math.max(0, pending), producedAt: Math.max(0, producedAt) };
-};
-
-const readLocal = (key: string): AutoclickState | null => {
+const readState = (): AutoclickState | null => {
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? 'null');
-    return toState(parsed);
+    const parsed: unknown = JSON.parse(localStorage.getItem('wc_autoclicker_v2_mirror') ?? 'null');
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const { k, pt } = parsed as RawAutoclickState;
+    const pending = Math.floor(Number(k));
+    const producedAt = Math.floor(Number(pt));
+    if (!Number.isFinite(pending) || !Number.isFinite(producedAt)) return null;
+    return { pending: Math.max(0, pending), producedAt: Math.max(0, producedAt) };
   } catch {
     return null;
-  }
-};
-
-const writeLocal = (key: string, payload: string): void => {
-  try {
-    localStorage.setItem(key, payload);
-  } catch {
-    // зеркало недоступно — пишем только в облако
   }
 };
 
 /**
  * Пересчитывает накопленное с учётом прошедшего времени.
  *
- * Возвращает новое состояние и, отдельно, сколько набежало, — это нужно
- * рендеру, чтобы не перерисовывать компонент без изменившегося числа.
+ * Возвращает состояние и, отдельно, сколько набежало — это нужно
+ * рендеру, чтобы не пересчитывать без изменившегося числа.
  */
 export const accrue = (
   state: AutoclickState,
   ratePerHour: number,
   now: number,
 ): { state: AutoclickState; produced: number } => {
-  // Первый запуск: отсчёт начинаем с текущего момента.
   if (state.producedAt === 0) {
     return { state: { pending: state.pending, producedAt: now }, produced: 0 };
   }
@@ -100,105 +82,91 @@ export const accrue = (
   return { state: { pending: state.pending + produced, producedAt }, produced };
 };
 
-/**
- * Доход автокликера за час при текущей частоте и доходе за клик.
- * Интервал всегда меньше секунды из-за завода, поэтому считаем делением.
- */
-export const getRatePerHour = (coinsPerTap: number): number => {
-  const intervalMs = getAutoclickIntervalMs();
-  return (HOUR_MS / intervalMs) * coinsPerTap;
-};
+/** Доход автокликера за час: клики в цикле × доход за клик. */
+export const getRatePerHour = (bonuses: FactoryBonuses, coinsPerTap: number): number =>
+  (HOUR_MS / bonuses.autoclickIntervalMs) * bonuses.autoclickClicks * coinsPerTap;
 
 /**
- * @param coinsPerTap доход за клик с учётом заводов и бустов
- * @param onCollect переводит накопленное на баланс
+ * @param bonuses скорость и количество кликов, задаются заводами
+ * @param coinsPerTap доход за один клик, уже с заводами
+ * @param credit зачисляет заработанное на баланс
  */
-export const useAutoclicker = (coinsPerTap: number, onCollect: (amount: number) => void) => {
-  const [pending, setPending] = useState(0);
-  const [loaded, setLoaded] = useState(false);
+export const useAutoclicker = (
+  bonuses: FactoryBonuses,
+  coinsPerTap: number,
+  credit: (amount: number) => void,
+): { ratePerHour: number } => {
   const stateRef = useRef<AutoclickState>({ pending: 0, producedAt: 0 });
-  const collectRef = useRef(onCollect);
-  collectRef.current = onCollect;
+  const creditRef = useRef(credit);
+  creditRef.current = credit;
 
-  // Доход за клик меняется от буста и прокачки, поэтому пересчитываем
-  // ставку каждый рендер и держим её в ref для таймера.
-  const ratePerHour = useMemo(() => getRatePerHour(coinsPerTap), [coinsPerTap]);
-  const rateRef = useRef(ratePerHour);
-  rateRef.current = ratePerHour;
+  const rateRef = useRef(0);
+  rateRef.current = getRatePerHour(bonuses, coinsPerTap);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    void (async () => {
-      let stored: AutoclickState | null = null;
-      try {
-        const raw = (await cloudStorage.getItem(AUTOCLICK_KEY)) ?? '';
-        stored = toState(JSON.parse(raw) as unknown);
-      } catch {
-        // облако недоступно или значение повреждено — берём зеркало
-      }
-      if (cancelled) return;
-
-      // Старые ключи нужны только один раз, чтобы ничего не потерять.
-      let legacy: AutoclickState | null = null;
-      for (const key of LEGACY_KEYS) {
-        legacy = legacy ?? readLocal(key);
-        if (legacy) break;
-      }
-
-      const at = Date.now();
-      const best = readLocal(AUTOCLICK_MIRROR_KEY) ?? stored ?? legacy;
-      const start: AutoclickState = best ?? { pending: 0, producedAt: 0 };
-      const { state } = accrue(start, rateRef.current, at);
-
-      stateRef.current = state;
-      setPending(state.pending);
-      setLoaded(true);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+  // Сбрасывает накопленное на баланс. Вызывается и по таймеру, и при
+  // сворачивании: в WebView setTimeout не выполняется, пока приложение
+  // свёрнуто, и без явного сброса выработка за это время пропала бы.
+  const flush = useCallback(() => {
+    const amount = stateRef.current.pending;
+    if (amount <= 0) return;
+    stateRef.current = { ...stateRef.current, pending: 0 };
+    creditRef.current(amount);
+    try {
+      localStorage.setItem('wc_autoclicker_v2_mirror', JSON.stringify(stateRef.current));
+    } catch {
+      // зеркало недоступно — следующий запуск досчитает сам
+    }
   }, []);
 
+  // Загрузка: подхватываем метку времени прошлого запуска. Сам расчёт
+  // не делаем — ставки от заводов к этому моменту ещё не пришли, а
+  // досчитает первый тик, когда они загрузятся.
   useEffect(() => {
+    const at = Date.now();
+    stateRef.current = readState() ?? { pending: 0, producedAt: at };
+    localStorage.setItem('wc_autoclicker_v2_mirror', JSON.stringify(stateRef.current));
+  }, []);
+
+  // Перед каждой сменой ставки досчитываем по старой: иначе время между
+  // загрузкой заводов и пересчётом попало бы по уже изменившейся ставке
+  // и доход поехал бы в обе стороны.
+  useEffect(() => {
+    const at = Date.now();
+    if (rateRef.current > 0 && stateRef.current.producedAt > 0) {
+      stateRef.current = accrue(stateRef.current, rateRef.current, at).state;
+    }
+    rateRef.current = getRatePerHour(bonuses, coinsPerTap);
+  }, [bonuses, coinsPerTap]);
+
+  // Тик выработки + порционный сброс на баланс.
+  useEffect(() => {
+    let flushed = Date.now();
     const id = window.setInterval(() => {
-      const { state, produced } = accrue(stateRef.current, rateRef.current, Date.now());
+      const at = Date.now();
+      const { state } = accrue(stateRef.current, rateRef.current, at);
       stateRef.current = state;
-      if (produced > 0) setPending(state.pending);
+      if (at - flushed >= FLUSH_MS) {
+        flushed = at;
+        flush();
+      }
     }, TICK_MS);
     return () => window.clearInterval(id);
-  }, []);
+  }, [flush]);
 
-  const persist = useCallback((state: AutoclickState) => {
-    const payload = JSON.stringify({ k: state.pending, pt: state.producedAt });
-    writeLocal(AUTOCLICK_MIRROR_KEY, payload);
-    void (async () => {
-      try {
-        await cloudStorage.setItem(AUTOCLICK_KEY, payload);
-      } catch {
-        // останется в зеркале, досылается при следующем запуске
-      }
-    })();
-  }, []);
-
+  // Гарантированный сброс при сворачивании/закрытии.
   useEffect(() => {
-    if (!loaded) return;
-    persist(stateRef.current);
-  }, [pending, loaded, persist]);
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('beforeunload', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [flush]);
 
-  /** Забирает весь накопленный доход на счёт. */
-  const collect = useCallback((): number => {
-    const amount = stateRef.current.pending;
-    if (amount <= 0) return 0;
-    // Метку времени сохраняем: сбросить её — значит выбросить выработку,
-    // набежавшую между тиком и нажатием.
-    stateRef.current = { pending: 0, producedAt: Date.now() };
-    setPending(0);
-    collectRef.current(amount);
-    persist(stateRef.current);
-    return amount;
-  }, [persist]);
-
-  return { pending, collect, loaded, ratePerHour };
+  return { ratePerHour: getRatePerHour(bonuses, coinsPerTap) };
 };
