@@ -327,8 +327,9 @@ export interface FactoryProgress {
   cycleMs: number;
   /** Сколько улучшений ждёт на складе. */
   stock: number;
-  /** Сколько осталось ждать, 0 если уже готово. */
+  /** Сколько осталось ждать, 0 если склад полон. */
   waitMs: number;
+  /** Есть ли что забирать прямо сейчас. */
   ready: boolean;
   /** Склад забран — производство стоит до сбора. */
   full: boolean;
@@ -354,7 +355,7 @@ export const getFactoryProgress = (
     cycleMs,
     stock,
     waitMs,
-    ready: owned && !full && waitMs === 0,
+    ready: owned && stock > 0,
     full,
   };
 };
@@ -514,9 +515,12 @@ export const collectImprovements = (
   }
 
   next.stock[id] = 0;
-  // После сбора отсчёт идёт заново: иначе накопленное в прошлом время
-  // мгновенно даст ещё одно улучшение.
-  next.readyAt[id] = now;
+  // После сбора отсчёт идёт заново — от ПОЛНОГО цикла отсюда, а не от
+  // этого момента: advanceProduction считает готовым всё, что уже
+  // наступило, и «готово прямо сейчас» превратилось бы в мгновенный
+  // плюс один. Завод собирал бы сам себя бесконечно, и ждать его было
+  // бы незачем.
+  next.readyAt[id] = now + getFactoryCycleMs(def, next.lvl[id] ?? 1, next.cooldownMs);
 
   return { state: next, count, rare, kind };
 };
