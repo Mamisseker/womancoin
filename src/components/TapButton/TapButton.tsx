@@ -206,15 +206,24 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
           >
             <span
               style={{
-                padding: '5px 12px',
+                padding: '5px 13px',
                 borderRadius: 100,
-                background: 'linear-gradient(135deg, #ff6b6b 0%, #e11d2e 100%)',
-                color: '#ffffff',
+                // Чёрное тело плашки: на оранжевой монете светлый фон
+                // съедался бы, а красный шрифт на чёрном держится сам.
+                background: 'linear-gradient(135deg, #17070b 0%, #08070a 100%)',
+                color: '#ff3b45',
                 fontSize: 15,
                 fontWeight: 900,
                 lineHeight: 1.2,
-                border: '1px solid rgba(255, 255, 255, 0.35)',
-                boxShadow: '0 8px 20px rgba(225, 29, 46, 0.55)',
+                // Красный бортик и неон вокруг: три кольца свечения
+                // снаружи плюс внутренняя подсветка края.
+                border: '1px solid #ff2d3f',
+                boxShadow:
+                  '0 0 8px rgba(255, 45, 63, 0.95), 0 0 22px rgba(255, 45, 63, 0.6), 0 0 44px rgba(255, 45, 63, 0.28), inset 0 0 10px rgba(255, 45, 63, 0.35)',
+                // Шрифт тоже подсвечен — иначе на чёрном он выглядел бы
+                // плоской красной заливкой, а не неоном.
+                textShadow:
+                  '0 0 6px rgba(255, 59, 69, 0.95), 0 0 16px rgba(255, 45, 63, 0.75)',
                 fontVariantNumeric: 'tabular-nums',
                 whiteSpace: 'nowrap',
               }}
