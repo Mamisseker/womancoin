@@ -189,9 +189,9 @@ const SectionTitle: FC<{ children: ReactNode }> = ({ children }) => (
 /**
  * Сводка по главным статам.
  *
- * Показываем только то, чем стат отличается от базового: по умолчанию
- * игрок видит три понятные цифры, а не семь подписей с множителями
- * «×1.00», которые к тому моменту ничего не значат.
+ * Ровно три цифры: сколько даёт клик, какой шанс крита и сколько
+ * падает за час. Множители «КД», «авто», «улучшения» отсюда убраны —
+ * игроку они ничего не говорили, а выглядели как шум.
  */
 const StatRow: FC<{ bonuses: FactoryBonuses; ratePerHour: number }> = ({
   bonuses,
@@ -201,11 +201,6 @@ const StatRow: FC<{ bonuses: FactoryBonuses; ratePerHour: number }> = ({
   if (bonuses.tapBonusMicro > 0) items.push(`Клик +${formatTokens(bonuses.tapBonusMicro)}`);
   if (bonuses.critChanceBps > 0) items.push(`Крит ${(bonuses.critChanceBps / 100).toFixed(1)}%`);
   items.push(`${formatTokens(ratePerHour)}/час`);
-  if (bonuses.autoclickClicks > 1) items.push(`Авто ×${bonuses.autoclickClicks}`);
-  if (bonuses.effMult > 1) items.push(`Улучшения ×${bonuses.effMult.toFixed(2)}`);
-  if (bonuses.qualityMult > 1) items.push(`Качество ×${bonuses.qualityMult.toFixed(2)}`);
-  if (bonuses.cooldownMs > 0) items.push(`КД −${Math.round(bonuses.cooldownMs / 1000)} сек`);
-  if (bonuses.spaceMult > 1) items.push('🚀 ×2 к кликам');
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
@@ -414,7 +409,7 @@ const FactoryCard: FC<FactoryCardProps> = ({
         >
           {affordable
             ? `${owned ? 'Улучшить' : 'Купить'} · ${formatTokens(cost)}`
-            : 'Не хватает денег'}
+            : `Не хватает ${formatTokens(cost - coins)}`}
         </ActionButton>
       </div>
     </div>
@@ -477,7 +472,7 @@ const ActionButton: FC<ActionButtonProps> = ({
 
   const look = styles[variant];
   // Серую ценовую кнопку не притемняем: она и так выключена, а
-  // потеря контраста сделала бы надпись «Не хватает денег» нечитаемой.
+  // потеря контраста сделала бы надпись «Не хватает …» нечитаемой.
   const opacity = isPrice && !affordable ? 1 : disabled ? 0.55 : 1;
 
   return (
@@ -501,7 +496,10 @@ const ActionButton: FC<ActionButtonProps> = ({
         opacity,
         WebkitTapHighlightColor: 'transparent',
         textAlign: 'center',
-        whiteSpace: 'nowrap',
+        // Сумма нехватки бывает длинной («Не хватает 99 999 999,999999») —
+        // пусть переносится на вторую строку, а не вылезает за кнопку.
+        whiteSpace: 'normal',
+        overflowWrap: 'anywhere',
       }}
     >
       {children}

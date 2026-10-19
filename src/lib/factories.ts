@@ -1,47 +1,29 @@
 /**
  * Заводы: покупка, производство улучшений и накопительные баффы.
  *
- * Каждый завод — отдельный тип улучшения, поэтому стратегии отличаются:
- * кто-то собирает клик через монетный завод, кто-то разгоняет автоклик
- * через электростанцию. Завод покупается один раз, дальше работает сам:
- * раз в КД кладёт улучшение на склад, а игрок забирает его кнопкой.
+ * Три завода и три стата: монетный качает клик, кристалловый — шанс
+ * крита, финансовый — пассивный доход. Завод покупается один раз,
+ * дальше работает сам: раз в цикл кладёт улучшение на склад, а игрок
+ * забирает его кнопкой.
  *
  * Собранное улучшение усиливает стат НАВСЕГДА — состояние баффов
  * хранится одним числом на стат, а не списком предметов: так их сразу
  * видно, легко ограничить и не нужно хранить инвентарь.
  *
- * Три источника бесконечного роста обязаны ограничиваться, иначе они
- * усилят самих себя до разрыва: машиностроительный сокращает КД, от
- * которого зависит, когда он же соберётся; химический повышает силу
- * собранных улучшений, включая свои; нанотехнологический поднимает
- * качество результата. Потолки лежат в CAP и применяются на
- * СБОРКЕ, а не на чтении — так предел виден уже в состоянии.
+ * Список сознательно короткий: десять однотипных карточек с подписями
+ * «КД», «авто», «улучшения» перегружали экран. Состояние прошлых версий
+ * при этом не выбрасывается — накопленные числа (КД, автоклик,
+ * множители) читаются из сохранения и по-прежнему ограничены CAP,
+ * чтобы старые аккаунты не поехали.
  */
 
 import coinImg from '@/components/FactoryPage/factoryCoin.svg';
-import experimentalImg from '@/components/FactoryPage/factoryExperimental.svg';
-import chemImg from '@/components/FactoryPage/factoryChem.svg';
 import crystalImg from '@/components/FactoryPage/factoryCrystal.svg';
 import financeImg from '@/components/FactoryPage/factoryFinance.svg';
-import machineImg from '@/components/FactoryPage/factoryMachine.svg';
-import nanoImg from '@/components/FactoryPage/factoryNano.svg';
-import powerImg from '@/components/FactoryPage/factoryPower.svg';
-import robotImg from '@/components/FactoryPage/factoryRobot.svg';
-import spaceImg from '@/components/FactoryPage/factorySpace.svg';
 
 import { MICRO } from '@/lib/units.ts';
 
-export type FactoryId =
-  | 'coin'
-  | 'power'
-  | 'machine'
-  | 'crystal'
-  | 'chem'
-  | 'robot'
-  | 'finance'
-  | 'nano'
-  | 'space'
-  | 'experimental';
+export type FactoryId = 'coin' | 'crystal' | 'finance';
 
 export type EffectKind =
   | 'tap'
@@ -80,24 +62,6 @@ export const FACTORIES: FactoryDef[] = [
     cycleMs: 30_000,
   },
   {
-    id: 'power',
-    title: '⚡ Электростанция',
-    effect: 'speed',
-    effectText: '+0.1% к скорости автокликера',
-    image: powerImg,
-    baseCost: 3_000,
-    cycleMs: 45_000,
-  },
-  {
-    id: 'machine',
-    title: '⚙️ Машиностроительный',
-    effect: 'cooldown',
-    effectText: '−0.5 сек к КД заводов',
-    image: machineImg,
-    baseCost: 30_000,
-    cycleMs: 60_000,
-  },
-  {
     id: 'crystal',
     title: '💎 Завод кристаллов',
     effect: 'crit',
@@ -107,24 +71,6 @@ export const FACTORIES: FactoryDef[] = [
     cycleMs: 60_000,
   },
   {
-    id: 'chem',
-    title: '🧪 Химический',
-    effect: 'eff',
-    effectText: '+0.1% к эффективности всех улучшений',
-    image: chemImg,
-    baseCost: 3_000_000,
-    cycleMs: 90_000,
-  },
-  {
-    id: 'robot',
-    title: '🤖 Робототехнический',
-    effect: 'robot',
-    effectText: '+1 дополнительный автоклик за цикл',
-    image: robotImg,
-    baseCost: 30_000_000,
-    cycleMs: 90_000,
-  },
-  {
     id: 'finance',
     title: '🏦 Финансовый',
     effect: 'passive',
@@ -132,33 +78,6 @@ export const FACTORIES: FactoryDef[] = [
     image: financeImg,
     baseCost: 300_000_000,
     cycleMs: 120_000,
-  },
-  {
-    id: 'nano',
-    title: '🔬 Нанотехнологический',
-    effect: 'quality',
-    effectText: 'повышает качество производимых улучшений',
-    image: nanoImg,
-    baseCost: 3_000_000_000,
-    cycleMs: 120_000,
-  },
-  {
-    id: 'space',
-    title: '🚀 Аэрокосмический',
-    effect: 'space',
-    effectText: '×2 к кликам на 30 секунд',
-    image: spaceImg,
-    baseCost: 30_000_000_000,
-    cycleMs: 180_000,
-  },
-  {
-    id: 'experimental',
-    title: '🏆 Экспериментальный',
-    effect: 'experimental',
-    effectText: 'редкие мощные улучшения ×5',
-    image: experimentalImg,
-    baseCost: 300_000_000_000,
-    cycleMs: 240_000,
   },
 ];
 
