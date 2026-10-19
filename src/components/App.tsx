@@ -90,8 +90,8 @@ export const App: FC = () => {
   }, [activate, claimJackpot]);
 
   const handleTap = () => {
-    if (energy < ENERGY_PER_TAP) return;
-    const { crit } = tap();
+    if (energy < ENERGY_PER_TAP) return null;
+    const { amount, crit } = tap();
     try {
       // Критический клик отзывается заметнее обычного — иначе множитель
       // невозможно почувствовать и он выглядит как «ничего не произошло».
@@ -100,6 +100,8 @@ export const App: FC = () => {
     } catch {
       // хептика недоступна вне Telegram — игнорируем
     }
+    // Сумма отсюда уходит в плашку, которая вылетает при крите.
+    return { amount, crit };
   };
 
   // Заряд энергии в процентах — для шкалы под кнопкой.

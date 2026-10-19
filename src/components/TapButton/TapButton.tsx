@@ -2,14 +2,23 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useRef, useState, type FC } from 'react';
 
 import type { Gender } from '@/hooks/useGender.ts';
+import { formatTokens } from '@/lib/units.ts';
 
 import manCoinImg from './Man-coin.png';
 import woCoinImg from './Wo-coin.png';
 
 interface TapButtonProps {
   gender?: Gender;
-  onTap: () => void;
+  /** Возвращает, сколько начислено и был ли крит — без этого плашка не вылетит. */
+  onTap: () => { amount: number; crit: boolean } | null;
   disabled?: boolean;
+}
+
+interface CritBadge {
+  id: number;
+  amount: number;
+  /** Сдвиг по горизонтали, чтобы подряд идущие криты не легли друг на друга. */
+  offset: number;
 }
 
 interface Particle {
@@ -27,10 +36,16 @@ const PARTICLE_LIFETIME = 1200;
 // Радиус круглой кнопки (260px) — частицы стартуют на его границе.
 const BUTTON_RADIUS = 130;
 const PARTICLE_SIZE = 24;
+/** Сколько живёт красная плашка с суммой крита. */
+const BADGE_LIFETIME = 1200;
+const BADGE_ANIMATION = 1100;
+/** Максимум одновременных плашек — при быстрых тапах они плодятся. */
+const BADGE_LIMIT = 8;
 
 export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
+  const [badges, setBadges] = useState<CritBadge[]>([]);
   const coinImg = gender === 'female' ? woCoinImg : manCoinImg;
 
   const spawnBurst = useCallback(() => {
@@ -58,10 +73,25 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
     }, PARTICLE_LIFETIME);
   }, []);
 
+  /** Красная плашка с суммой крита: вылетает из центра монеты и гаснет. */
+  const spawnBadge = (amount: number) => {
+    const badge: CritBadge = {
+      id: Date.now() + Math.random(),
+      amount,
+      offset: (Math.random() - 0.5) * 110,
+    };
+
+    setBadges((list) => [...list, badge].slice(-BADGE_LIMIT));
+    window.setTimeout(() => {
+      setBadges((list) => list.filter((item) => item.id !== badge.id));
+    }, BADGE_LIFETIME);
+  };
+
   const handleClick = () => {
     if (disabled) return;
     spawnBurst();
-    onTap();
+    const result = onTap();
+    if (result?.crit) spawnBadge(result.amount);
   };
 
   return (
@@ -146,6 +176,52 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
               willChange: 'transform, opacity',
             }}
           />
+        ))}
+      </AnimatePresence>
+
+      {/* Крит: красная плашка с полученной суммой */}
+      <AnimatePresence>
+        {badges.map((badge) => (
+          <motion.div
+            key={badge.id}
+            initial={{ opacity: 0, y: 40, scale: 0.55, x: badge.offset }}
+            animate={{
+              opacity: [0, 1, 1, 0],
+              y: [40, -34, -84, -136],
+              scale: [0.55, 1.14, 1, 1],
+            }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: BADGE_ANIMATION / 1000, ease: 'easeOut' }}
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: 54,
+              display: 'flex',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+              zIndex: 4,
+              willChange: 'transform, opacity',
+            }}
+          >
+            <span
+              style={{
+                padding: '5px 12px',
+                borderRadius: 100,
+                background: 'linear-gradient(135deg, #ff6b6b 0%, #e11d2e 100%)',
+                color: '#ffffff',
+                fontSize: 15,
+                fontWeight: 900,
+                lineHeight: 1.2,
+                border: '1px solid rgba(255, 255, 255, 0.35)',
+                boxShadow: '0 8px 20px rgba(225, 29, 46, 0.55)',
+                fontVariantNumeric: 'tabular-nums',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              +{formatTokens(badge.amount)}
+            </span>
+          </motion.div>
         ))}
       </AnimatePresence>
     </div>
