@@ -23,7 +23,12 @@ import financeImg from '@/components/FactoryPage/factoryFinance.svg';
 
 import { MICRO } from '@/lib/units.ts';
 
-export type FactoryId = 'coin' | 'crystal' | 'finance';
+/**
+ * Идентификатор — произвольная строка: три базовых завода имеют
+ * фиксированные имена, а добавленные панелью разработчика придумывает
+ * сам (слаг из названия).
+ */
+export type FactoryId = string;
 
 export type EffectKind =
   | 'tap'
@@ -86,6 +91,91 @@ export const getFactoryDef = (id: FactoryId): FactoryDef => {
   if (!def) throw new Error(`Неизвестный завод: ${id}`);
   return def;
 };
+
+/* ---------- Панель разработчика: правки каталога на этом устройстве ---------- */
+
+/**
+ * Полный слепок заводов, как они пришли из кода. Держим, чтобы
+ * «сбросить всё» вернул исходные три заводы, а не трогал чужие данные.
+ */
+const BUILTIN: FactoryDef[] = FACTORIES.map((def) => ({ ...def }));
+
+/** Идентификаторы заводов из кода — остальные добавлены панелью. */
+export const BUILTIN_FACTORY_IDS: string[] = BUILTIN.map((def) => def.id);
+
+/** Исходные картинки — по ним же работает кнопка «сбросить картинку». */
+export const BUILTIN_IMAGES: Record<string, string> = Object.fromEntries(
+  BUILTIN.map((def) => [def.id, def.image]),
+);
+
+export interface CatalogPatch {
+  /** Правки к заводам по id: перечисленные поля подменяются целиком. */
+  overrides: Record<string, Partial<FactoryDef>>;
+  /** Совсем новые заводы, добавленные через панель. */
+  added: FactoryDef[];
+}
+
+export const emptyCatalogPatch = (): CatalogPatch => ({ overrides: {}, added: [] });
+
+const DEV_CATALOG_KEY = 'wc_dev_catalog';
+
+const isFactoryDef = (value: unknown): value is FactoryDef => {
+  if (typeof value !== 'object' || value === null) return false;
+  const o = value as Record<string, unknown>;
+  return (
+    typeof o.id === 'string' &&
+    typeof o.title === 'string' &&
+    typeof o.image === 'string' &&
+    typeof o.baseCost === 'number' &&
+    typeof o.cycleMs === 'number'
+  );
+};
+
+export const readCatalogPatch = (): CatalogPatch => {
+  try {
+    const raw = localStorage.getItem(DEV_CATALOG_KEY);
+    if (!raw) return emptyCatalogPatch();
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const overrides = (
+      typeof parsed.overrides === 'object' && parsed.overrides !== null
+        ? parsed.overrides
+        : {}
+    ) as CatalogPatch['overrides'];
+    const added = Array.isArray(parsed.added) ? parsed.added.filter(isFactoryDef) : [];
+    return { overrides, added };
+  } catch {
+    return emptyCatalogPatch();
+  }
+};
+
+/**
+ * Пересобирает FACTORIES прямо в массиве.
+ *
+ * Модуль держит ссылку на один и тот же массив во всех импортах, поэтому
+ * замена содержимого на месте видна всем без перезагрузки страницы —
+ * иначе пришлось бы таскать каталог через контекст до каждого хука.
+ */
+export const applyCatalogPatch = (patch: CatalogPatch): void => {
+  const next: FactoryDef[] = BUILTIN.map((def) => ({ ...def, ...patch.overrides[def.id] }));
+  for (const def of patch.added) {
+    next.push({ ...def, ...patch.overrides[def.id] });
+  }
+  FACTORIES.splice(0, FACTORIES.length, ...next);
+};
+
+/** Сохраняет правки в localStorage этого устройства и сразу применяет. */
+export const writeCatalogPatch = (patch: CatalogPatch): void => {
+  try {
+    localStorage.setItem(DEV_CATALOG_KEY, JSON.stringify(patch));
+  } catch {
+    // Хранилище переполнено — правки останутся в памяти до перезагрузки.
+  }
+  applyCatalogPatch(patch);
+};
+
+// Каталог подхватывается синхронно при загрузке модуля: панель живёт
+// только на этом устройстве, асинхронной фазы и ожидания нет.
+applyCatalogPatch(readCatalogPatch());
 
 /** Сколько улучшений помещается на складе одного завода. */
 export const MAX_STOCK = 5;

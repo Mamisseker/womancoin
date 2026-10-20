@@ -14,7 +14,7 @@
 
 import { hapticFeedback } from '@tma.js/sdk-react';
 import type { FC, ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   FACTORIES,
@@ -27,6 +27,8 @@ import {
   type FactoryProgress,
 } from '@/lib/factories.ts';
 import { formatTokens } from '@/lib/units.ts';
+
+import { DevPanel } from './DevPanel.tsx';
 
 interface FactoryPageProps {
   coins: number;
@@ -46,6 +48,22 @@ export const FactoryPage: FC<FactoryPageProps> = ({
   progressOf,
 }) => {
   const [toast, setToast] = useState<string | null>(null);
+
+  // Панель разработчика открывается пятью нажатиями на заголовок.
+  const [devOpen, setDevOpen] = useState(false);
+  const [catalogVersion, setCatalogVersion] = useState(0);
+  const titleTaps = useRef({ count: 0, last: 0 });
+
+  const handleTitleTap = () => {
+    const at = Date.now();
+    const taps = titleTaps.current;
+    taps.count = at - taps.last < 600 ? taps.count + 1 : 1;
+    taps.last = at;
+    if (taps.count >= 5) {
+      taps.count = 0;
+      setDevOpen(true);
+    }
+  };
 
   // Сообщение о собранном улучшении гаснет само, чтобы не засорять список.
   useEffect(() => {
@@ -110,7 +128,10 @@ export const FactoryPage: FC<FactoryPageProps> = ({
       }}
     >
       <div style={{ paddingLeft: 20, paddingRight: 20, flexShrink: 0 }}>
-        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--wc-text)' }}>
+        <div
+          onClick={handleTitleTap}
+          style={{ fontSize: 22, fontWeight: 800, color: 'var(--wc-text)' }}
+        >
           Мои заводы
         </div>
         <div
@@ -146,8 +167,10 @@ export const FactoryPage: FC<FactoryPageProps> = ({
         </div>
       )}
 
-      {/* Прокручиваемый вниз список заводов */}
+      {/* Прокручиваемый вниз список заводов. key меняется при правке
+          каталога панелью разработчика — список читает FACTORIES заново. */}
       <div
+        key={catalogVersion}
         style={{
           flex: 1,
           minHeight: 0,
@@ -167,6 +190,13 @@ export const FactoryPage: FC<FactoryPageProps> = ({
         {available.length > 0 && <SectionTitle>Купить</SectionTitle>}
         {available.map(renderCard)}
       </div>
+
+      {devOpen && (
+        <DevPanel
+          onClose={() => setDevOpen(false)}
+          onCatalogChange={() => setCatalogVersion((version) => version + 1)}
+        />
+      )}
     </div>
   );
 };
