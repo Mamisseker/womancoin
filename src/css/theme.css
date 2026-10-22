@@ -40,3 +40,31 @@
   --wc-shadow-2: 0 8px 32px rgba(0, 0, 0, 0.6);
   --wc-nav-inactive: rgba(235, 235, 245, 0.45);
 }
+
+/*
+ * Заглушка для альбомной ориентации.
+ *
+ * Ограничение только по высоте: так под правило попадают телефоны в
+ * повёрнутом состоянии, но не десктопные окна и не большие планшеты,
+ * где горизонтальная игра не мешает. Оверлей перекрывает и нижнее меню,
+ * и панели с z-index 100.
+ */
+.wc-rotate-guard {
+  display: none;
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .wc-rotate-guard {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: var(--wc-bg);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    text-align: center;
+  }
+}

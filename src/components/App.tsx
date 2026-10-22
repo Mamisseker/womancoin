@@ -68,6 +68,21 @@ export const App: FC = () => {
     document.documentElement.dataset.theme = 'dark';
   }, []);
 
+  useEffect(() => {
+    // Пытаемся зафиксировать портрет средствами браузера. Без fullscreen
+    // большинство WebView отказывает, поэтому отказ глушим: надёжная
+    // страховка — CSS-заглушка .wc-rotate-guard внизу разметки.
+    try {
+      // В lib.dom этого TS метода ещё нет, хотя браузеры его знают.
+      const orientation = screen.orientation as ScreenOrientation & {
+        lock?: (value: 'portrait') => Promise<void>;
+      };
+      void orientation.lock?.('portrait')?.catch(() => undefined);
+    } catch {
+      // Screen Orientation API недоступен — остаётся заглушка.
+    }
+  }, []);
+
   // Разовый бонус приглашённому по реферальной ссылке.
   useEffect(() => {
     if (bonus > 0) {
@@ -371,6 +386,17 @@ export const App: FC = () => {
         )}
 
         <BottomNav active={tab} onChange={setTab} />
+
+        {/* Альбомная ориентация: играть нельзя, пока телефон повёрнут. */}
+        <div className="wc-rotate-guard">
+          <div style={{ fontSize: 44, lineHeight: 1 }}>📱</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--wc-text)' }}>
+            Поверните телефон
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--wc-text-2)', maxWidth: 260 }}>
+            Игра работает только в вертикальном режиме
+          </div>
+        </div>
       </div>
     </AppRoot>
   );
