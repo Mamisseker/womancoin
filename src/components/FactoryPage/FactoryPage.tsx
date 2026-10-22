@@ -31,6 +31,7 @@ import {
 import { formatCompactTokens, formatTokens } from '@/lib/units.ts';
 
 import { DevPanel } from './DevPanel.tsx';
+import { FriendsSheet } from './FriendsSheet.tsx';
 
 interface FactoryPageProps {
   coins: number;
@@ -42,6 +43,8 @@ interface FactoryPageProps {
   /** Уровень дружеского завода — число друзей. */
   friends: number;
   setFriends: (count: number) => void;
+  /** Реферальная ссылка для приглашений. */
+  referralLink: string;
 }
 
 export const FactoryPage: FC<FactoryPageProps> = ({
@@ -53,8 +56,11 @@ export const FactoryPage: FC<FactoryPageProps> = ({
   progressOf,
   friends,
   setFriends,
+  referralLink,
 }) => {
   const [toast, setToast] = useState<string | null>(null);
+  // Шторка приглашений: открывается тапом по дружескому заводу.
+  const [friendsOpen, setFriendsOpen] = useState(false);
 
   // Панель разработчика открывается пятью нажатиями на заголовок.
   const [devOpen, setDevOpen] = useState(false);
@@ -192,7 +198,7 @@ export const FactoryPage: FC<FactoryPageProps> = ({
         }}
       >
         <SectionTitle>Друзья</SectionTitle>
-        <FriendsCard friends={friends} />
+        <FriendsCard friends={friends} onOpen={() => setFriendsOpen(true)} />
 
         {/* Покупное — сверху: это то, за чем игрок приходит на вкладку.
             Работающие заводы уходят вниз, чтобы не оттеснять витрину. */}
@@ -202,6 +208,14 @@ export const FactoryPage: FC<FactoryPageProps> = ({
         {working.length > 0 && <SectionTitle>Работают</SectionTitle>}
         {working.map(renderCard)}
       </div>
+
+      {friendsOpen && (
+        <FriendsSheet
+          friends={friends}
+          referralLink={referralLink}
+          onClose={() => setFriendsOpen(false)}
+        />
+      )}
 
       {devOpen && (
         <DevPanel
@@ -218,12 +232,23 @@ export const FactoryPage: FC<FactoryPageProps> = ({
 /**
  * Карточка дружеского завода.
  *
- * Отдельная от FactoryCard: у неё нет цены, склада и кнопок. Уровень
- * равен числу друзей, а награда за каждого приходит в момент
- * приглашения — сейчас счётчик задаётся в панели разработчика.
+ * Отдельная от FactoryCard: у неё нет цены и склада. Уровень равен
+ * числу друзей, награда за каждого приходит в момент приглашения.
+ * Тап по карточке открывает шторку со ссылкой и системным выбором
+ * контактов Telegram; сам счётчик пока задаётся в панели разработчика.
  */
-const FriendsCard: FC<{ friends: number }> = ({ friends }) => (
+const FriendsCard: FC<{ friends: number; onOpen: () => void }> = ({ friends, onOpen }) => (
   <div
+    role="button"
+    tabIndex={0}
+    aria-label="Пригласить друзей"
+    onClick={onOpen}
+    onKeyDown={(event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        onOpen();
+      }
+    }}
     style={{
       display: 'flex',
       flexDirection: 'column',
@@ -234,6 +259,8 @@ const FriendsCard: FC<{ friends: number }> = ({ friends }) => (
       boxShadow: 'var(--wc-shadow-1)',
       borderRadius: 'var(--wc-radius-m)',
       flexShrink: 0,
+      cursor: 'pointer',
+      WebkitTapHighlightColor: 'transparent',
     }}
   >
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
@@ -295,6 +322,13 @@ const FriendsCard: FC<{ friends: number }> = ({ friends }) => (
             : 'Каждый друг даёт уровень и разовую награду.'}
         </div>
       </div>
+    </div>
+
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--wc-accent)' }}>
+        Пригласить друзей
+      </span>
+      <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--wc-accent)' }}>›</span>
     </div>
   </div>
 );

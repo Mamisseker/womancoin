@@ -58,7 +58,7 @@ export const App: FC = () => {
     coinsPerTap,
     addCoins,
   );
-  const { bonus, claimBonus } = useReferral();
+  const { bonus, claimBonus, referralLink } = useReferral();
   const [tab, setTab] = useState('tap');
   // Статистика живёт оверлеем из «Тапа» — отдельная вкладка убрана.
   const [statsOpen, setStatsOpen] = useState(false);
@@ -376,6 +376,7 @@ export const App: FC = () => {
             progressOf={factories.progressOf}
             friends={factories.friends}
             setFriends={factories.setFriends}
+            referralLink={referralLink}
           />
         )}
 
