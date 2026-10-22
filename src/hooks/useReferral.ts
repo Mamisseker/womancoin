@@ -5,20 +5,6 @@ const REFERRER_KEY = 'wc_referrer';
 const REF_BONUS_KEY = 'wc_ref_bonus';
 export const REF_BONUS_AMOUNT = 1000;
 
-export interface ReferralDemoStats {
-  friendsCount: number;
-  friendsCoins: number;
-  friendsActive: number;
-}
-
-// Демо-статистика по рефералам: без сервера реальные значения не собрать.
-// Когда появится бэкенд — заменить на fetch к эндпоинту.
-const DEMO_STATS: ReferralDemoStats = {
-  friendsCount: 3,
-  friendsCoins: 12450,
-  friendsActive: 2,
-};
-
 /**
  * Собираем реферальную ссылку и начисляем бонус приглашённому.
  * Пригласивший получает плюшку позже, когда появится общий сервер.
@@ -103,6 +89,5 @@ export const useReferral = () => {
     bonus,
     claimBonus,
     usingTelegram,
-    demoStats: DEMO_STATS,
   };
 };

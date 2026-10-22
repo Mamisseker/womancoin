@@ -18,6 +18,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import {
   FACTORIES,
+  FRIEND_REWARD,
+  FRIENDS_FACTORY,
   MAX_STOCK,
   RARE_EFFECT_LABELS,
   type CollectResult,
@@ -37,6 +39,9 @@ interface FactoryPageProps {
   buy: (id: FactoryId) => boolean;
   collect: (id: FactoryId) => CollectResult | null;
   progressOf: (id: FactoryId) => FactoryProgress | null;
+  /** Уровень дружеского завода — число друзей. */
+  friends: number;
+  setFriends: (count: number) => void;
 }
 
 export const FactoryPage: FC<FactoryPageProps> = ({
@@ -46,6 +51,8 @@ export const FactoryPage: FC<FactoryPageProps> = ({
   buy,
   collect,
   progressOf,
+  friends,
+  setFriends,
 }) => {
   const [toast, setToast] = useState<string | null>(null);
 
@@ -184,6 +191,9 @@ export const FactoryPage: FC<FactoryPageProps> = ({
           paddingBottom: 16,
         }}
       >
+        <SectionTitle>Друзья</SectionTitle>
+        <FriendsCard friends={friends} />
+
         {working.length > 0 && <SectionTitle>Работают</SectionTitle>}
         {working.map(renderCard)}
 
@@ -195,11 +205,97 @@ export const FactoryPage: FC<FactoryPageProps> = ({
         <DevPanel
           onClose={() => setDevOpen(false)}
           onCatalogChange={() => setCatalogVersion((version) => version + 1)}
+          friends={friends}
+          onSetFriends={setFriends}
         />
       )}
     </div>
   );
 };
+
+/**
+ * Карточка дружеского завода.
+ *
+ * Отдельная от FactoryCard: у неё нет цены, склада и кнопок. Уровень
+ * равен числу друзей, а награда за каждого приходит в момент
+ * приглашения — сейчас счётчик задаётся в панели разработчика.
+ */
+const FriendsCard: FC<{ friends: number }> = ({ friends }) => (
+  <div
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 9,
+      padding: 11,
+      background: 'var(--wc-surface)',
+      border: '1px solid rgba(255, 184, 0, 0.35)',
+      boxShadow: 'var(--wc-shadow-1)',
+      borderRadius: 'var(--wc-radius-m)',
+      flexShrink: 0,
+    }}
+  >
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+      <img
+        src={FRIENDS_FACTORY.image}
+        alt=""
+        style={{
+          width: 52,
+          height: 52,
+          borderRadius: 'var(--wc-radius-s)',
+          display: 'block',
+          pointerEvents: 'none',
+          userSelect: 'none',
+          flexShrink: 0,
+        }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--wc-text)', lineHeight: 1.2 }}>
+            {FRIENDS_FACTORY.title}
+          </span>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              color: friends > 0 ? 'var(--wc-accent)' : 'var(--wc-text-3)',
+              background: friends > 0 ? 'rgba(255, 184, 0, 0.14)' : 'var(--wc-surface-2)',
+              border: `1px solid ${friends > 0 ? 'rgba(255, 184, 0, 0.3)' : 'var(--wc-separator)'}`,
+              borderRadius: 100,
+              padding: '2px 6px',
+              flexShrink: 0,
+            }}
+          >
+            {friends > 0 ? `ур. ${friends}` : 'нет друзей'}
+          </span>
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--wc-accent)',
+            marginTop: 4,
+            lineHeight: 1.3,
+          }}
+        >
+          {FRIENDS_FACTORY.effectText}
+        </div>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: 'var(--wc-text-2)',
+            marginTop: 4,
+            lineHeight: 1.35,
+          }}
+        >
+          {friends > 0
+            ? `Друзей: ${friends} · всего получено ${formatTokens(friends * FRIEND_REWARD)}`
+            : 'Каждый друг даёт уровень и разовую награду.'}
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 const SectionTitle: FC<{ children: ReactNode }> = ({ children }) => (
   <div

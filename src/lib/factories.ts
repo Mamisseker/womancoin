@@ -24,10 +24,11 @@
 import coinImg from '@/components/FactoryPage/factoryCoin.svg';
 import crystalImg from '@/components/FactoryPage/factoryCrystal.svg';
 import bonusImg from '@/components/FactoryPage/factoryBonus.svg';
+import friendsImg from '@/components/FactoryPage/factoryFriends.svg';
 import financeImg from '@/components/FactoryPage/factoryFinance.svg';
 
 import { JACKPOT_GROWTH } from '@/lib/boosts.ts';
-import { MICRO } from '@/lib/units.ts';
+import { MICRO, formatTokens } from '@/lib/units.ts';
 
 /**
  * Идентификатор — произвольная строка: три базовых завода имеют
@@ -47,7 +48,8 @@ export type EffectKind =
   | 'passive'
   | 'quality'
   | 'space'
-  | 'experimental';
+  | 'experimental'
+  | 'friends';
 
 export interface FactoryDef {
   id: FactoryId;
@@ -101,6 +103,29 @@ export const FACTORIES: FactoryDef[] = [
     cycleMs: 60_000,
   },
 ];
+
+/** Сколько монет приносит каждый новый друг. */
+export const FRIEND_REWARD = 10_000;
+
+/**
+ * Дружеский завод.
+ *
+ * Стоит особняком от FACTORIES: его уровень — это число друзей, а не
+ * покупка, и он ничего не производит по времени. Поэтому он не
+ * участвует ни в цене, ни в цикле, ни в панели разработчика — там
+ * для него отдельный счётчик.
+ */
+export const FRIENDS_FACTORY: FactoryDef = {
+  id: 'friends',
+  title: '👥 Дружеский',
+  effect: 'friends',
+  effectText: `+${formatTokens(FRIEND_REWARD)} за друга`,
+  // На экране баланс в токенах, поэтому и награда подписана ими же:
+  // «10 000» здесь читались бы как 10 000 токенов.
+  image: friendsImg,
+  baseCost: 0,
+  cycleMs: 0,
+};
 
 export const getFactoryDef = (id: FactoryId): FactoryDef => {
   const def = FACTORIES.find((f) => f.id === id);
@@ -224,6 +249,8 @@ const EFFECT_AMOUNT: Record<EffectKind, number> = {
   quality: 1000, // +10%
   space: SPACE_BUFF_MS,
   experimental: 0,
+  // Друзья не производятся по времени — эффект начисляется приглашением.
+  friends: 0,
 };
 
 /**
@@ -276,6 +303,8 @@ export interface FactoryState {
   spaceUntil: number;
   /** Сколько улучшений бонусного завода собрано: ступени компаунда. */
   jackpotSteps: number;
+  /** Сколько друзей пришло по приглашению: уровень дружеского завода. */
+  friends: number;
 }
 
 export const createFactoryState = (): FactoryState => ({
@@ -292,6 +321,7 @@ export const createFactoryState = (): FactoryState => ({
   qualityBps: 0,
   spaceUntil: 0,
   jackpotSteps: 0,
+  friends: 0,
 });
 
 /** Что дают заводы остальному коду игры. */
@@ -503,6 +533,9 @@ const applyEffect = (
         JACKPOT_STEP_LIMIT,
       );
       break;
+    case 'friends':
+      // Счётчик друзей меняет только панель разработчика, сбор его не трогает.
+      break;
     case 'experimental':
       break;
   }
@@ -621,4 +654,5 @@ export const RARE_EFFECT_LABELS: Record<EffectKind, string> = {
   quality: 'качество улучшений',
   space: '×2 к кликам',
   experimental: 'редкое улучшение',
+  friends: 'друзья',
 };

@@ -20,17 +20,6 @@ const tabs: Tab[] = [
     ),
   },
   {
-    id: 'stats',
-    label: 'Статистика',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 20V10" />
-        <path d="M12 20V4" />
-        <path d="M6 20v-6" />
-      </svg>
-    ),
-  },
-  {
     id: 'boost',
     label: 'Завод',
     icon: (
@@ -38,18 +27,6 @@ const tabs: Tab[] = [
         <path d="M2 20h20" />
         <path d="M4 20V8l6 4V8l6 4V6h4v14" />
         <path d="M15 6V4h4v2" />
-      </svg>
-    ),
-  },
-  {
-    id: 'friends',
-    label: 'Друзья',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="9" cy="7" r="4" />
-        <path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
       </svg>
     ),
   },

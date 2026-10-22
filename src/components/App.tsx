@@ -6,7 +6,6 @@ import { BottomNav } from '@/components/BottomNav/BottomNav.tsx';
 import { FactoryPage } from '@/components/FactoryPage/FactoryPage.tsx';
 import { useAutoclicker } from '@/hooks/useAutoclicker.ts';
 import { useFactories } from '@/hooks/useFactories.ts';
-import { FriendsPage } from '@/components/FriendsPage/FriendsPage.tsx';
 import { GenderSelect } from '@/components/GenderSelect/GenderSelect.tsx';
 import { StatsPage } from '@/components/StatsPage/StatsPage.tsx';
 import { TapButton } from '@/components/TapButton/TapButton.tsx';
@@ -59,9 +58,10 @@ export const App: FC = () => {
     coinsPerTap,
     addCoins,
   );
-  const { referralLink, invitedBy, bonus, claimBonus, usingTelegram, demoStats } =
-    useReferral();
+  const { bonus, claimBonus } = useReferral();
   const [tab, setTab] = useState('tap');
+  // Статистика живёт оверлеем из «Тапа» — отдельная вкладка убрана.
+  const [statsOpen, setStatsOpen] = useState(false);
 
   useEffect(() => {
     // Тёмная оранжевая тема зафиксирована: дизайн не зависит от темы Telegram.
@@ -171,6 +171,34 @@ export const App: FC = () => {
               overscrollBehavior: 'contain',
             }}
           >
+            {/* Кнопка статистики в левом верхнем углу экрана. */}
+            <button
+              type="button"
+              aria-label="Статистика"
+              onClick={() => setStatsOpen(true)}
+              style={{
+                position: 'absolute',
+                top: 8,
+                left: 12,
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 18,
+                lineHeight: 1,
+                background: 'var(--wc-surface)',
+                border: '1px solid var(--wc-separator)',
+                color: 'var(--wc-text-2)',
+                boxShadow: 'var(--wc-shadow-1)',
+                cursor: 'pointer',
+                zIndex: 2,
+              }}
+            >
+              📊
+            </button>
+
             {/* Шкала энергии закреплена у верхнего края и вынесена из
                 центрируемого блока: иначе она сдвинула бы круг монеты
                 вниз от геометрического центра экрана. */}
@@ -316,8 +344,6 @@ export const App: FC = () => {
           </div>
         )}
 
-        {tab === 'stats' && <StatsPage />}
-
         {tab === 'boost' && (
           <FactoryPage
             coins={coins}
@@ -326,17 +352,12 @@ export const App: FC = () => {
             buy={factories.buy}
             collect={factories.collect}
             progressOf={factories.progressOf}
+            friends={factories.friends}
+            setFriends={factories.setFriends}
           />
         )}
 
-        {tab === 'friends' && (
-          <FriendsPage
-            referralLink={referralLink}
-            usingTelegram={usingTelegram}
-            invitedBy={invitedBy}
-            demoStats={demoStats}
-          />
-        )}
+        {tab === 'tap' && statsOpen && <StatsPage onClose={() => setStatsOpen(false)} />}
 
         {tab === 'wallet' && (
           <WalletPage />

@@ -22,6 +22,7 @@ import {
   computeFactoryBonuses,
   createFactoryState,
   FACTORIES,
+  FRIEND_REWARD,
   getFactoryProgress,
   type CollectResult,
   type FactoryBonuses,
@@ -82,6 +83,7 @@ const readState = (raw: string | null): FactoryState | null => {
   state.qualityBps = num(o.qualityBps);
   state.spaceUntil = num(o.spaceUntil);
   state.jackpotSteps = num(o.jackpotSteps);
+  state.friends = num(o.friends);
   return state;
 };
 
@@ -208,6 +210,23 @@ export const useFactories = (
     return result;
   }, []);
 
+  /**
+   * Ручная правка числа друзей.
+   *
+   * Пока сервера нет, приглашения некому считать, поэтому счётчик
+   * задаётся в панели разработчика. Каждый новый друг сразу приносит
+   * FRIEND_REWARD: считаем дельту, а не всё число, — иначе повторное
+   * применение того же значения начисляло бы награду заново.
+   */
+  const setFriends = useCallback((count: number) => {
+    const next = Math.max(0, Math.floor(Number.isFinite(count) ? count : 0));
+    const delta = next - stateRef.current.friends;
+    if (delta === 0) return;
+    stateRef.current = { ...stateRef.current, friends: next };
+    setState(stateRef.current);
+    if (delta > 0) creditRef.current(delta * FRIEND_REWARD);
+  }, []);
+
   const bonuses: FactoryBonuses = useMemo(() => computeFactoryBonuses(state, now), [state, now]);
 
   return {
@@ -217,6 +236,8 @@ export const useFactories = (
     loaded,
     buy,
     collect,
+    friends: state.friends,
+    setFriends,
     /** Статус одной карточки — для рендера списка. */
     progressOf: (id: FactoryId) => {
       const def = FACTORIES.find((f) => f.id === id);

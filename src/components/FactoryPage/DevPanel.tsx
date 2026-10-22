@@ -21,6 +21,7 @@ import {
   BUILTIN_FACTORY_IDS,
   BUILTIN_IMAGES,
   FACTORIES,
+  FRIEND_REWARD,
   emptyCatalogPatch,
   readCatalogPatch,
   writeCatalogPatch,
@@ -29,12 +30,16 @@ import {
   type FactoryDef,
   type FactoryId,
 } from '@/lib/factories.ts';
-import { MICRO } from '@/lib/units.ts';
+import { MICRO, formatTokens } from '@/lib/units.ts';
 
 interface DevPanelProps {
   onClose: () => void;
   /** Вызывается после каждой правки каталога — страница перерисовывает список. */
   onCatalogChange: () => void;
+  /** Текущее число друзей — уровень дружеского завода. */
+  friends: number;
+  /** Задаёт число друзей; каждый новый сразу приносит монеты. */
+  onSetFriends: (count: number) => void;
 }
 
 const OWNER_KEY = 'wc_dev_owner';
@@ -59,6 +64,7 @@ const EFFECT_LABELS: Record<EffectKind, string> = {
   quality: 'Качество улучшений',
   space: 'Временный ×2',
   experimental: 'Редкие ×5',
+  friends: 'Друзья',
 };
 
 /** Заглушка для нового завода, пока не загружена своя картинка. */
@@ -179,7 +185,7 @@ const Field: FC<{ label: string; children: ReactNode }> = ({ label, children }) 
   </div>
 );
 
-export const DevPanel: FC<DevPanelProps> = ({ onClose, onCatalogChange }) => {
+export const DevPanel: FC<DevPanelProps> = ({ onClose, onCatalogChange, friends, onSetFriends }) => {
   const [unlocked, setUnlocked] = useState(isSessionActive);
 
   // Сессия сгорает сама: панель закрывается даже если открытой её забыли.
@@ -203,7 +209,14 @@ export const DevPanel: FC<DevPanelProps> = ({ onClose, onCatalogChange }) => {
     );
   }
 
-  return <Editor onClose={onClose} onCatalogChange={onCatalogChange} />;
+  return (
+    <Editor
+      onClose={onClose}
+      onCatalogChange={onCatalogChange}
+      friends={friends}
+      onSetFriends={onSetFriends}
+    />
+  );
 };
 
 /* ------------------------------- Вход -------------------------------- */
@@ -347,11 +360,17 @@ const LockScreen: FC<{ onClose: () => void; onSuccess: () => void }> = ({
 
 /* ------------------------------ Редактор ------------------------------ */
 
-const Editor: FC<{ onClose: () => void; onCatalogChange: () => void }> = ({
-  onClose,
-  onCatalogChange,
-}) => {
+const Editor: FC<{
+  onClose: () => void;
+  onCatalogChange: () => void;
+  friends: number;
+  onSetFriends: (count: number) => void;
+}> = ({ onClose, onCatalogChange, friends, onSetFriends }) => {
   const [entries, setEntries] = useState(loadEntries);
+  // Черновик отдельным состоянием: начисление срабатывает по кнопке, а
+  // не на каждый введённый символ — иначе «1», «12», «123» дали бы
+  // награду трижды.
+  const [friendsDraft, setFriendsDraft] = useState(String(friends));
   const [draftTitle, setDraftTitle] = useState('');
   const [saved, setSaved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -505,6 +524,23 @@ const Editor: FC<{ onClose: () => void; onCatalogChange: () => void }> = ({
     setError(null);
   };
 
+  const applyFriends = () => {
+    const value = Math.floor(Number(friendsDraft.replace(',', '.')));
+    if (!Number.isFinite(value) || value < 0) {
+      setError('Друзей — целое число от 0');
+      return;
+    }
+    const delta = value - friends;
+    onSetFriends(value);
+    setFriendsDraft(String(value));
+    setError(null);
+    setSaved(
+      delta > 0
+        ? `Друзей: ${value} · начислено +${formatTokens(delta * FRIEND_REWARD)}`
+        : `Друзей: ${value}`,
+    );
+  };
+
   const logout = () => {
     endSession();
     onClose();
@@ -573,6 +609,46 @@ const Editor: FC<{ onClose: () => void; onCatalogChange: () => void }> = ({
           {error}
         </div>
       )}
+
+      {/* Друзья: пока сервера нет, счётчик задаётся вручную. */}
+      <div
+        style={{
+          marginTop: 14,
+          padding: 12,
+          background: 'var(--wc-surface)',
+          border: '1px solid var(--wc-separator)',
+          borderRadius: 'var(--wc-radius-m)',
+          display: 'flex',
+          gap: 8,
+          alignItems: 'flex-end',
+          flexWrap: 'wrap',
+        }}
+      >
+        <Field label={`Друзей · +${formatTokens(FRIEND_REWARD)} за нового`}>
+          <input
+            value={friendsDraft}
+            inputMode="numeric"
+            onChange={(e) => setFriendsDraft(e.target.value)}
+            style={inputStyle}
+          />
+        </Field>
+        <button
+          type="button"
+          onClick={applyFriends}
+          style={{
+            ...inputStyle,
+            width: 'auto',
+            cursor: 'pointer',
+            fontWeight: 900,
+            color: '#1a1200',
+            background: 'linear-gradient(135deg, #ffe07a, #ffb800, #ff8a00)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            padding: '0 16px',
+          }}
+        >
+          Применить
+        </button>
+      </div>
 
       {/* Новый завод */}
       <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
@@ -678,11 +754,13 @@ const Editor: FC<{ onClose: () => void; onCatalogChange: () => void }> = ({
                   onChange={(e) => update(entry.id, { effect: e.target.value as EffectKind })}
                   style={{ ...inputStyle, cursor: 'pointer' }}
                 >
-                  {(Object.keys(EFFECT_LABELS) as EffectKind[]).map((kind) => (
+                  {(Object.keys(EFFECT_LABELS) as EffectKind[])
+                    .filter((kind) => kind !== 'friends')
+                    .map((kind) => (
                     <option key={kind} value={kind}>
                       {EFFECT_LABELS[kind]}
                     </option>
-                  ))}
+                    ))}
                 </select>
               </Field>
               <Field label="Цена, токенов">
