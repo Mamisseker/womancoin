@@ -197,16 +197,17 @@ export const FactoryPage: FC<FactoryPageProps> = ({
           paddingBottom: 16,
         }}
       >
-        <SectionTitle>Друзья</SectionTitle>
-        <FriendsCard friends={friends} onOpen={() => setFriendsOpen(true)} />
-
         {/* Покупное — сверху: это то, за чем игрок приходит на вкладку.
-            Работающие заводы уходят вниз, чтобы не оттеснять витрину. */}
+            Дружеский завод стоит последним: приглашения — редкое
+            действие, и оно не должно оттеснять витрину и коллекцию. */}
         {available.length > 0 && <SectionTitle>Купить</SectionTitle>}
         {available.map(renderCard)}
 
         {working.length > 0 && <SectionTitle>Работают</SectionTitle>}
         {working.map(renderCard)}
+
+        <SectionTitle>Друзья</SectionTitle>
+        <FriendsCard friends={friends} onOpen={() => setFriendsOpen(true)} />
       </div>
 
       {friendsOpen && (
