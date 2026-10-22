@@ -194,11 +194,13 @@ export const FactoryPage: FC<FactoryPageProps> = ({
         <SectionTitle>Друзья</SectionTitle>
         <FriendsCard friends={friends} />
 
-        {working.length > 0 && <SectionTitle>Работают</SectionTitle>}
-        {working.map(renderCard)}
-
+        {/* Покупное — сверху: это то, за чем игрок приходит на вкладку.
+            Работающие заводы уходят вниз, чтобы не оттеснять витрину. */}
         {available.length > 0 && <SectionTitle>Купить</SectionTitle>}
         {available.map(renderCard)}
+
+        {working.length > 0 && <SectionTitle>Работают</SectionTitle>}
+        {working.map(renderCard)}
       </div>
 
       {devOpen && (
