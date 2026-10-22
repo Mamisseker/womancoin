@@ -28,7 +28,7 @@ import {
   type FactoryId,
   type FactoryProgress,
 } from '@/lib/factories.ts';
-import { formatTokens } from '@/lib/units.ts';
+import { formatCompactTokens, formatTokens } from '@/lib/units.ts';
 
 import { DevPanel } from './DevPanel.tsx';
 
@@ -534,8 +534,8 @@ const FactoryCard: FC<FactoryCardProps> = ({
           affordable={affordable}
         >
           {affordable
-            ? `${owned ? 'Улучшить' : 'Купить'} · ${formatTokens(cost)}`
-            : `Не хватает ${formatTokens(cost - coins)}`}
+            ? `${owned ? 'Улучшить' : 'Купить'} · ${formatCompactTokens(cost)}`
+            : `Не хватает ${formatCompactTokens(cost - coins)}`}
         </ActionButton>
       </div>
     </div>
@@ -607,7 +607,11 @@ const ActionButton: FC<ActionButtonProps> = ({
       onClick={onClick}
       disabled={disabled || !onClick}
       style={{
-        flex: 1,
+        // Кнопка сбора не сжимается и не переносится, а ценовая занимает
+        // остаток и может ужаться: длинная сумма больше не выдавливает
+        // соседнюю кнопку и не дёргает карточку.
+        flex: isPrice ? '1 1 0%' : '0 0 auto',
+        minWidth: 0,
         padding: '9px 10px',
         borderRadius: 'var(--wc-radius-s)',
         border: look.border,
@@ -624,8 +628,8 @@ const ActionButton: FC<ActionButtonProps> = ({
         textAlign: 'center',
         // Сумма нехватки бывает длинной («Не хватает 99 999 999,999999») —
         // пусть переносится на вторую строку, а не вылезает за кнопку.
-        whiteSpace: 'normal',
-        overflowWrap: 'anywhere',
+        whiteSpace: isPrice ? 'normal' : 'nowrap',
+        overflowWrap: isPrice ? 'anywhere' : 'normal',
       }}
     >
       {children}

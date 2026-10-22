@@ -51,6 +51,27 @@ export const formatTokens = (micro: number): string => {
 };
 
 /**
+ * Компактная запись цены для кнопок: «1,2 тыс.», «4,5 млн», «12 млрд».
+ *
+ * Цены растут вчетверо за уровень, и точная запись («314 572 800,123456»)
+ * распирала кнопку на две-три строки — карточки прыгали. Здесь важна
+ * стабильная длина, а не последняя микро-единица; точный баланс и
+ * награды по-прежнему выводятся через formatTokens.
+ */
+const COMPACT_FORMATTER = new Intl.NumberFormat('ru-RU', {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+});
+
+export const formatCompactTokens = (micro: number): string => {
+  const safe = Number.isFinite(micro) ? Math.max(0, Math.floor(micro)) : 0;
+  const tokens = safe / MICRO;
+  // До тысячи компактная запись округлила бы всё до «1» — там точная.
+  if (tokens >= 1000) return COMPACT_FORMATTER.format(tokens);
+  return formatTokens(safe);
+};
+
+/**
  * Компактная подпись «+0.000001 /тап» под прогрессом прокачки.
  * Показывает прирост за тап в токенах.
  */
