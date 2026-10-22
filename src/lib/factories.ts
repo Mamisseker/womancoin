@@ -1,10 +1,14 @@
 /**
  * Заводы: покупка, производство улучшений и накопительные баффы.
  *
- * Три завода и три стата: монетный качает клик, кристалловый — шанс
- * крита, финансовый — пассивный доход. Завод покупается один раз,
- * дальше работает сам: раз в цикл кладёт улучшение на склад, а игрок
- * забирает его кнопкой.
+ * Четыре завода и четыре стата: монетный качает клик, кристалловый —
+ * шанс крита, финансовый — пассивный доход, бонусный — выплату буста
+ * «Бонус». Завод покупается один раз, дальше работает сам: раз в цикл
+ * кладёт улучшение на склад, а игрок забирает его кнопкой.
+ *
+ * У всех заводов один и тот же КД — 60 секунд: разный темп производства
+ * заставлял считать, какой выгоднее, вместо того чтобы просто собирать.
+ * Уровень завода ускоряет цикл на 8% и стоит ×4 за ступень.
  *
  * Собранное улучшение усиливает стат НАВСЕГДА — состояние баффов
  * хранится одним числом на стат, а не списком предметов: так их сразу
@@ -19,8 +23,10 @@
 
 import coinImg from '@/components/FactoryPage/factoryCoin.svg';
 import crystalImg from '@/components/FactoryPage/factoryCrystal.svg';
+import bonusImg from '@/components/FactoryPage/factoryBonus.svg';
 import financeImg from '@/components/FactoryPage/factoryFinance.svg';
 
+import { JACKPOT_GROWTH } from '@/lib/boosts.ts';
 import { MICRO } from '@/lib/units.ts';
 
 /**
@@ -32,6 +38,7 @@ export type FactoryId = string;
 
 export type EffectKind =
   | 'tap'
+  | 'jackpot'
   | 'crit'
   | 'speed'
   | 'cooldown'
@@ -64,7 +71,16 @@ export const FACTORIES: FactoryDef[] = [
     effectText: '+0.0001 к силе клика',
     image: coinImg,
     baseCost: 300,
-    cycleMs: 30_000,
+    cycleMs: 60_000,
+  },
+  {
+    id: 'bonus',
+    title: '🎁 Бонусный',
+    effect: 'jackpot',
+    effectText: '×1,05 к выплате «Бонуса»',
+    image: bonusImg,
+    baseCost: 30_000,
+    cycleMs: 60_000,
   },
   {
     id: 'crystal',
@@ -82,7 +98,7 @@ export const FACTORIES: FactoryDef[] = [
     effectText: '+0.1% к пассивному доходу',
     image: financeImg,
     baseCost: 300_000_000,
-    cycleMs: 120_000,
+    cycleMs: 60_000,
   },
 ];
 
@@ -198,6 +214,7 @@ const MIN_CYCLE_FACTOR = 0.3;
 /** Величина одного улучшения до множителей, в бейсис-поинтах/миллисекундах. */
 const EFFECT_AMOUNT: Record<EffectKind, number> = {
   tap: Math.round(0.0001 * MICRO), // 100 микро за тап
+  jackpot: 1, // одна ступень компаунда
   crit: 10, // 0.1%
   speed: 10, // 0.1%
   cooldown: 500, // 0.5 сек
@@ -227,6 +244,13 @@ const CAP = {
   space: 600_000, // буст не дольше 10 минут
 } as const;
 
+/**
+ * Предел ступеней бонуса — это НЕ балансный потолок, а защита от Infinity:
+ * 1,05 в степени больше ~14 800 переполняет double, и выплата стала бы
+ * NaN. До предела реальной игрой не добраться.
+ */
+const JACKPOT_STEP_LIMIT = 5_000;
+
 const clamp = (value: number, cap: number): number =>
   value < 0 ? 0 : value > cap ? cap : value;
 
@@ -250,6 +274,8 @@ export interface FactoryState {
   passiveBps: number;
   qualityBps: number;
   spaceUntil: number;
+  /** Сколько улучшений бонусного завода собрано: ступени компаунда. */
+  jackpotSteps: number;
 }
 
 export const createFactoryState = (): FactoryState => ({
@@ -265,6 +291,7 @@ export const createFactoryState = (): FactoryState => ({
   passiveBps: 0,
   qualityBps: 0,
   spaceUntil: 0,
+  jackpotSteps: 0,
 });
 
 /** Что дают заводы остальному коду игры. */
@@ -287,6 +314,8 @@ export interface FactoryBonuses {
   effMult: number;
   /** Качество производимых улучшений, ×1 — ×3. */
   qualityMult: number;
+  /** Множитель выплаты «Бонуса» из бонусного завода (×1 без него). */
+  jackpotMult: number;
 }
 
 export const computeFactoryBonuses = (
@@ -308,6 +337,12 @@ export const computeFactoryBonuses = (
     cooldownMs: clamp(state.cooldownMs, CAP.cooldown),
     effMult,
     qualityMult,
+    // 1,05 за каждое собранное улучшение: рост компаундом, а не
+    // прибавкой — на длинной дистанции бонус обгоняет сам себя.
+    jackpotMult: Math.min(
+      JACKPOT_GROWTH ** Math.min(state.jackpotSteps, JACKPOT_STEP_LIMIT),
+      1e300,
+    ),
   };
 };
 
@@ -459,6 +494,15 @@ const applyEffect = (
       state.spaceUntil = Math.max(state.spaceUntil, now) + duration;
       break;
     }
+    // Ступень бонуса не множится качеством и эффективностью: улучшение
+    // с ×30 к силе дало бы 1,05^30 ≈ ×4,3 за один сбор, и компаунд
+    // разошёлся бы. Редкое улучшение стоит пяти обычных ступеней.
+    case 'jackpot':
+      state.jackpotSteps = Math.min(
+        state.jackpotSteps + (rare ? 5 : 1),
+        JACKPOT_STEP_LIMIT,
+      );
+      break;
     case 'experimental':
       break;
   }
@@ -567,6 +611,7 @@ export const rollCrit = (chanceBps: number, roll: number): boolean =>
 
 export const RARE_EFFECT_LABELS: Record<EffectKind, string> = {
   tap: 'сила клика',
+  jackpot: 'выплата «Бонуса»',
   crit: 'шанс крита',
   speed: 'скорость автокликера',
   cooldown: 'КД заводов',

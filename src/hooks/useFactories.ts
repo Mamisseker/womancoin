@@ -81,6 +81,7 @@ const readState = (raw: string | null): FactoryState | null => {
   state.passiveBps = num(o.passiveBps);
   state.qualityBps = num(o.qualityBps);
   state.spaceUntil = num(o.spaceUntil);
+  state.jackpotSteps = num(o.jackpotSteps);
   return state;
 };
 

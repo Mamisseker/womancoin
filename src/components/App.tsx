@@ -17,7 +17,7 @@ import { useProgress } from '@/hooks/useProgress.ts';
 import { useReferral } from '@/hooks/useReferral.ts';
 import { formatTapGain, formatTokens } from '@/lib/units.ts';
 import { BoostsPanel } from '@/components/BoostsPanel/BoostsPanel.tsx';
-import type { BoostId } from '@/lib/boosts.ts';
+import { getJackpotMicro, type BoostId } from '@/lib/boosts.ts';
 import { useBoosts } from '@/hooks/useBoosts.ts';
 
 const ENERGY_PER_TAP = 1;
@@ -77,6 +77,10 @@ export const App: FC = () => {
       }
     }
   }, [bonus, claimBonus, addCoins]);
+
+  // Текущая выплата «Бонуса» — в подписи кнопки, чтобы игрок видел,
+  // сколько даёт бонусный завод, а не зачитывал множитель.
+  const jackpotPayoutMicro = getJackpotMicro(factories.bonuses.jackpotMult);
 
   const handleActivateBoost = useCallback((id: BoostId) => {
     try {
@@ -305,6 +309,7 @@ export const App: FC = () => {
                   states={boostStates}
                   now={boostNow}
                   onActivate={handleActivateBoost}
+                  details={{ jackpot: `+${formatTokens(jackpotPayoutMicro)}` }}
                 />
               </div>
             </div>

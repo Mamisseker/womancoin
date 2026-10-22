@@ -49,6 +49,7 @@ const STORAGE_LIMIT = 4_500_000;
 
 const EFFECT_LABELS: Record<EffectKind, string> = {
   tap: 'Сила клика',
+  jackpot: 'Выплата «Бонуса»',
   crit: 'Шанс крита',
   speed: 'Скорость автокликера',
   cooldown: 'Сокращение КД',

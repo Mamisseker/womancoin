@@ -10,8 +10,8 @@
  * Кольцо читается лучше, чем заливка снизу-вверх, и не спорит с
  * круглой монетой за внимание.
  *
- * Бейдж «×N» показывает стак применений: потратили одно — стало ×2,
- * кончилось — ждём откат, потом снова 1, 2, 3.
+ * Бейдж «×N» со стаком применений рисуется только когда применений
+ * больше одного: при единственном заряде это был бы лишний «×1».
  */
 
 import { motion } from 'framer-motion';
@@ -36,9 +36,20 @@ interface BoostsPanelProps {
   onActivate: (id: BoostId) => void;
   /** Заблокировать все бусты (например, во время загрузки прогресса). */
   disabled?: boolean;
+  /**
+   * Подписи вместо статических из BOOSTS. Нужны «Бонусу»: его выплата
+   * растёт от бонусного завода и в определении стоять не может.
+   */
+  details?: Partial<Record<BoostId, string>>;
 }
 
-export const BoostsPanel: FC<BoostsPanelProps> = ({ states, now, onActivate, disabled }) => {
+export const BoostsPanel: FC<BoostsPanelProps> = ({
+  states,
+  now,
+  onActivate,
+  disabled,
+  details,
+}) => {
   return (
     <div
       style={{
@@ -73,11 +84,12 @@ export const BoostsPanel: FC<BoostsPanelProps> = ({ states, now, onActivate, dis
             : 'linear-gradient(145deg, rgba(255, 184, 0, 0.14), rgba(255, 138, 0, 0.06))';
 
         // Подпись под кнопкой: эффект, откат или идущая работа.
+        const detail = details?.[def.id] ?? def.detail;
         const caption = isWorking
           ? formatRemaining(view.workLeft)
           : isEmpty
             ? formatRemaining(view.refillLeft)
-            : def.detail;
+            : detail;
 
         return (
           <motion.button
@@ -88,7 +100,7 @@ export const BoostsPanel: FC<BoostsPanelProps> = ({ states, now, onActivate, dis
                 ? `${def.title}: работает ${formatRemaining(view.workLeft)}`
                 : isEmpty
                   ? `${def.title}: откат ${formatRemaining(view.refillLeft)}`
-                  : `${def.title}: ${def.detail} (${view.charges} из ${MAX_CHARGES})`
+                  : `${def.title}: ${details?.[def.id] ?? def.detail} (${view.charges} из ${MAX_CHARGES})`
             }
             onClick={() => onActivate(def.id)}
             disabled={!canPress}
@@ -141,7 +153,8 @@ export const BoostsPanel: FC<BoostsPanelProps> = ({ states, now, onActivate, dis
                 {def.icon}
               </span>
 
-              {/* Бейдж стака применений */}
+              {/* Бейдж стака применений — только если их больше одного */}
+              {MAX_CHARGES > 1 && (
               <span
                 style={{
                   position: 'absolute',
@@ -168,6 +181,7 @@ export const BoostsPanel: FC<BoostsPanelProps> = ({ states, now, onActivate, dis
               >
                 ×{view.charges}
               </span>
+              )}
             </span>
 
             {/* Подпись: имя буста и его эффект/таймер */}

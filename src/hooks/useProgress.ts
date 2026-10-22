@@ -8,7 +8,7 @@ import {
 } from '@/lib/progressStorage.ts';
 import { MICRO_PER_TAP } from '@/lib/units.ts';
 import { CRIT_MULTIPLIER, rollCrit, type FactoryBonuses } from '@/lib/factories.ts';
-import { JACKPOT_MICRO, REGEN_MULTIPLIER, TURBO_TAP_MULTIPLIER } from '@/lib/boosts.ts';
+import { REGEN_MULTIPLIER, TURBO_TAP_MULTIPLIER, getJackpotMicro } from '@/lib/boosts.ts';
 
 const BASE_MAX_ENERGY = 1000;
 // Базовая скорость регена: 1 энергия за 5 секунд (без прокачки).
@@ -335,11 +335,18 @@ export const useProgress = (
   const factoryRef = useRef(factory);
   factoryRef.current = factory;
 
-  /** Разово выдать выплату буста и показать, что сработало. */
+  /**
+   * Разово выдать выплату буста и показать, что сработало.
+   *
+   * Сумма считается в момент нажатия по текущему бонусному заводу:
+   * улучшения, собранные после, на уже полученное не влияют, а
+   * сорванный кэш не оставит игрока со старой выплатой.
+   */
   const claimJackpot = useCallback((): number => {
-    stateRef.current = { ...stateRef.current, coins: stateRef.current.coins + JACKPOT_MICRO };
-    setCoins((c) => c + JACKPOT_MICRO);
-    return JACKPOT_MICRO;
+    const amount = getJackpotMicro(factoryRef.current?.jackpotMult ?? 1);
+    stateRef.current = { ...stateRef.current, coins: stateRef.current.coins + amount };
+    setCoins((c) => c + amount);
+    return amount;
   }, []);
 
   const addCoins = useCallback((amount: number) => {
