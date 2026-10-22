@@ -168,6 +168,13 @@ export const App: FC = () => {
               position: 'relative',
               zIndex: 1,
               overflowY: 'auto',
+              // Без явного overflowX браузер считает его auto (так велит
+              // CSS при overflow-y: auto), и вылетающие частицы создают
+              // горизонтальную прокрутку — экран можно смахнуть вбок.
+              overflowX: 'hidden',
+              // Жест оставляем только вертикальный: горизонтальные смахивания
+              // не должны ни прокручивать, ни уводить страницу.
+              touchAction: 'pan-y',
               overscrollBehavior: 'contain',
             }}
           >
