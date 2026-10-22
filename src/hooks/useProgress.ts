@@ -10,9 +10,13 @@ import { MICRO_PER_TAP } from '@/lib/units.ts';
 import { CRIT_MULTIPLIER, rollCrit, type FactoryBonuses } from '@/lib/factories.ts';
 import { REGEN_MULTIPLIER, TURBO_TAP_MULTIPLIER, getJackpotMicro } from '@/lib/boosts.ts';
 
-const BASE_MAX_ENERGY = 1000;
-// Базовая скорость регена: 1 энергия за 5 секунд (без прокачки).
-const BASE_ENERGY_REGEN_MS = 5000;
+// Запас энергии намеренно скромный: 200 тапов при трате 1 энергии за
+// тап. Тысяча не ощущалась вовсе — шкала не двигалась за сессию, и
+// энергия выглядела бесконечной.
+const BASE_MAX_ENERGY = 200;
+// Базовая скорость регена: 1 энергия за 13,5 секунды — полный бак
+// с нуля набирается за 45 минут (без прокачек и «Бодрости»).
+const BASE_ENERGY_REGEN_MS = 13_500;
 // Пассивный доход начисляется раз в минуту, пока приложение открыто.
 const PASSIVE_TICK_MS = 60_000;
 
@@ -49,7 +53,7 @@ export const UPGRADES: UpgradeDef[] = [
     key: 'wc_up_energy',
     icon: '🔋',
     title: 'Макс. энергия',
-    detail: '+200 к запасу энергии',
+    detail: '+20 к запасу энергии',
     baseCost: 800,
     growth: 1.38,
   },
@@ -73,7 +77,7 @@ export const UPGRADES: UpgradeDef[] = [
   },
 ];
 
-const getMaxEnergy = (level: number) => BASE_MAX_ENERGY + level * 200;
+const getMaxEnergy = (level: number) => BASE_MAX_ENERGY + level * 20;
 // Прирост за тап в микро-единицах: базово 1 (0.000001 токена),
 // каждый уровень урона добавляет ещё одну микро-единицу.
 const getCoinsPerTap = (level: number) => MICRO_PER_TAP + level;
