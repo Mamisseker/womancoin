@@ -8,6 +8,7 @@ import {
 } from '@/lib/progressStorage.ts';
 import { MICRO_PER_TAP } from '@/lib/units.ts';
 import { CRIT_MULTIPLIER, rollCrit, type FactoryBonuses } from '@/lib/factories.ts';
+import { consumeForceCrit } from '@/lib/dev.ts';
 import { REGEN_MULTIPLIER, TURBO_TAP_MULTIPLIER, getJackpotMicro } from '@/lib/boosts.ts';
 
 // Запас энергии намеренно скромный: 200 тапов при трате 1 энергии за
@@ -323,7 +324,10 @@ export const useProgress = (
       base *
       (turboTapRef.current ? TURBO_TAP_MULTIPLIER : 1) *
       (bonuses?.spaceMult ?? 1);
-    const crit = rollCrit(bonuses?.critChanceBps ?? 0, Math.floor(Math.random() * 10_000));
+    // Форс из панели разработчика срабатывает раньше обычного броска.
+    const crit =
+      consumeForceCrit() ||
+      rollCrit(bonuses?.critChanceBps ?? 0, Math.floor(Math.random() * 10_000));
     const amount = crit ? gain * CRIT_MULTIPLIER : gain;
     setCoins((c) => c + amount);
     setEnergy((e) => Math.max(0, e - 1));

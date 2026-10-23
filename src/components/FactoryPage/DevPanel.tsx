@@ -31,6 +31,7 @@ import {
   type FactoryDef,
   type FactoryId,
 } from '@/lib/factories.ts';
+import { armForceCrit } from '@/lib/dev.ts';
 import { MICRO, formatTokens } from '@/lib/units.ts';
 
 interface DevPanelProps {
@@ -372,6 +373,8 @@ const Editor: FC<{
   // не на каждый введённый символ — иначе «1», «12», «123» дали бы
   // награду трижды.
   const [friendsDraft, setFriendsDraft] = useState(String(friends));
+  // Одноразовый крит: кнопка взводит его и панель можно закрывать.
+  const [critArmed, setCritArmed] = useState(false);
   const [draftTitle, setDraftTitle] = useState('');
   const [saved, setSaved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -648,6 +651,60 @@ const Editor: FC<{
           }}
         >
           Применить
+        </button>
+      </div>
+
+      {/* Тест крита: чтобы увидеть трещину на монете без завода кристаллов. */}
+      <div
+        style={{
+          marginTop: 14,
+          padding: 12,
+          background: 'var(--wc-surface)',
+          border: '1px solid var(--wc-separator)',
+          borderRadius: 'var(--wc-radius-m)',
+          display: 'flex',
+          gap: 10,
+          alignItems: 'center',
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--wc-text)' }}>
+            Тест крита
+          </div>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: 'var(--wc-text-2)',
+              marginTop: 2,
+              lineHeight: 1.35,
+            }}
+          >
+            Следующий тап на вкладке «Тап» станет критом: трещина и серые цифры.
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            armForceCrit();
+            setCritArmed(true);
+          }}
+          disabled={critArmed}
+          style={{
+            ...inputStyle,
+            width: 'auto',
+            cursor: critArmed ? 'default' : 'pointer',
+            fontWeight: 900,
+            color: critArmed ? 'var(--wc-text-3)' : '#1a1200',
+            background: critArmed
+              ? 'var(--wc-surface-2)'
+              : 'linear-gradient(135deg, #ffe07a, #ffb800, #ff8a00)',
+            border: critArmed ? '1px solid var(--wc-separator)' : '1px solid rgba(255,255,255,0.2)',
+            padding: '0 16px',
+            opacity: 1,
+          }}
+        >
+          {critArmed ? 'Взведено' : 'Включить'}
         </button>
       </div>
 
