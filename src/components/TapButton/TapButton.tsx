@@ -42,10 +42,29 @@ const BADGE_ANIMATION = 1100;
 /** Максимум одновременных плашек — при быстрых тапах они плодятся. */
 const BADGE_LIMIT = 8;
 
+/**
+ * Трещина на монете в момент крита: главный разлом сверху вниз и
+ * короткие отводки. Рисуем SVG-путями, а не спрайтом: линия остаётся
+ * резкой на любом DPI и ничего не весит.
+ */
+const CRACK_MAIN =
+  'M 50 6 L 45 21 L 53 32 L 42 46 L 55 57 L 46 71 L 54 84 L 50 95';
+const CRACK_BRANCHES = [
+  'M 53 32 L 66 26 L 75 29',
+  'M 42 46 L 28 39 L 20 43',
+  'M 55 57 L 69 63 L 77 60',
+  'M 46 71 L 33 77',
+];
+/** Сколько трещина держится, прежде чем растаять. */
+const CRACK_LIFETIME = 1000;
+
 export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
   const [badges, setBadges] = useState<CritBadge[]>([]);
+  // Живёт ровно одна трещина: новый крит перерисовывает её заново.
+  const [crack, setCrack] = useState<{ id: number } | null>(null);
+  const crackId = useRef(0);
   const coinImg = gender === 'female' ? woCoinImg : manCoinImg;
 
   const spawnBurst = useCallback(() => {
@@ -87,11 +106,24 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
     }, BADGE_LIFETIME);
   };
 
+  /** Разлом: прочерчиваем трещину по монете и даём ей растаять. */
+  const spawnCrack = () => {
+    crackId.current += 1;
+    const id = crackId.current;
+    setCrack({ id });
+    window.setTimeout(() => {
+      setCrack((current) => (current && current.id === id ? null : current));
+    }, CRACK_LIFETIME);
+  };
+
   const handleClick = () => {
     if (disabled) return;
     spawnBurst();
     const result = onTap();
-    if (result?.crit) spawnBadge(result.amount);
+    if (result?.crit) {
+      spawnBadge(result.amount);
+      spawnCrack();
+    }
   };
 
   return (
@@ -136,6 +168,61 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
             userSelect: 'none',
           }}
         />
+
+        {/* Разлом поверх монеты: трещина прорезается по пути и гаснет. */}
+        <AnimatePresence>
+          {crack && (
+            <motion.div
+              key={crack.id}
+              aria-hidden
+              initial={{ opacity: 1 }}
+              animate={{ x: [0, -1.5, 1.5, -1, 0] }}
+              exit={{ opacity: 0 }}
+              transition={{
+                x: { duration: 0.35, ease: 'easeOut' },
+                opacity: { duration: 0.25 },
+              }}
+              style={{
+                position: 'absolute',
+                inset: '11%',
+                pointerEvents: 'none',
+                zIndex: 1,
+              }}
+            >
+              <svg viewBox="0 0 100 100" width="100%" height="100%">
+                <motion.path
+                  d={CRACK_MAIN}
+                  fill="none"
+                  stroke="#2b1400"
+                  strokeWidth={1.9}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: 1, opacity: 0.9 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                />
+                {CRACK_BRANCHES.map((d, index) => (
+                  <motion.path
+                    key={d}
+                    d={d}
+                    fill="none"
+                    stroke="#2b1400"
+                    strokeWidth={1.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    initial={{ pathLength: 0, opacity: 0 }}
+                    animate={{ pathLength: 1, opacity: 0.75 }}
+                    transition={{
+                      duration: 0.22,
+                      ease: 'easeOut',
+                      delay: 0.1 + index * 0.035,
+                    }}
+                  />
+                ))}
+              </svg>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.button>
 
       {/* Монеты, вылетающие из периметра кнопки */}
