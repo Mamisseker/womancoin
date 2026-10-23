@@ -12,7 +12,7 @@
  * сам, а здесь игрок забирает именно улучшения, каждое отдельно.
  */
 
-import { hapticFeedback } from '@tma.js/sdk-react';
+import { hapticFeedback, initData } from '@tma.js/sdk-react';
 import type { FC, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -28,6 +28,7 @@ import {
   type FactoryId,
   type FactoryProgress,
 } from '@/lib/factories.ts';
+import { isDevUser } from '@/lib/dev.ts';
 import { formatCompactTokens, formatTokens } from '@/lib/units.ts';
 
 import { DevPanel } from './DevPanel.tsx';
@@ -62,12 +63,15 @@ export const FactoryPage: FC<FactoryPageProps> = ({
   // Шторка приглашений: открывается тапом по дружескому заводу.
   const [friendsOpen, setFriendsOpen] = useState(false);
 
-  // Панель разработчика открывается пятью нажатиями на заголовок.
+  // Панель разработчика открывается пятью нажатиями на заголовок —
+  // и только у аккаунта из src/lib/dev.ts, для остальных жест молчит.
+  const canOpenDev = isDevUser(initData.user()?.username);
   const [devOpen, setDevOpen] = useState(false);
   const [catalogVersion, setCatalogVersion] = useState(0);
   const titleTaps = useRef({ count: 0, last: 0 });
 
   const handleTitleTap = () => {
+    if (!canOpenDev) return;
     const at = Date.now();
     const taps = titleTaps.current;
     taps.count = at - taps.last < 600 ? taps.count + 1 : 1;

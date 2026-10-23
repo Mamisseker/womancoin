@@ -179,7 +179,7 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
         ))}
       </AnimatePresence>
 
-      {/* Крит: серая плашка с полученной суммой */}
+      {/* Крит: просто серые цифры, поднимаются от монеты и гаснут */}
       <AnimatePresence>
         {badges.map((badge) => (
           <motion.div
@@ -206,24 +206,12 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
           >
             <span
               style={{
-                padding: '5px 13px',
-                borderRadius: 100,
-                // Тёмно-серое тело плашки: на оранжевой монете светлый фон
-                // съедался бы, а холодный светлый шрифт на графите держится сам.
-                background: 'linear-gradient(135deg, #2b2b30 0%, #131316 100%)',
-                color: '#f2f2f5',
-                fontSize: 15,
+                // Без плашки и свечения: чистые серые цифры, читаемые
+                // и на тёмном фоне, и поверх оранжевой монеты.
+                color: '#b9bdc6',
+                fontSize: 16,
                 fontWeight: 900,
                 lineHeight: 1.2,
-                // Серебристый бортик и неон вокруг: три кольца свечения
-                // снаружи плюс внутренняя подсветка края.
-                border: '1px solid #9da0a8',
-                boxShadow:
-                  '0 0 8px rgba(210, 213, 220, 0.55), 0 0 22px rgba(190, 193, 200, 0.3), 0 0 44px rgba(170, 173, 180, 0.12), inset 0 0 10px rgba(220, 222, 228, 0.18)',
-                // Шрифт тоже подсвечен — иначе на графите он выглядел бы
-                // плоской заливкой, а не неоном.
-                textShadow:
-                  '0 0 6px rgba(235, 236, 240, 0.7), 0 0 16px rgba(200, 203, 210, 0.45)',
                 fontVariantNumeric: 'tabular-nums',
                 whiteSpace: 'nowrap',
               }}
