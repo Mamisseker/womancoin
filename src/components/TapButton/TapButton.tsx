@@ -2,23 +2,15 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useRef, useState, type FC } from 'react';
 
 import type { Gender } from '@/hooks/useGender.ts';
-import { formatTokens } from '@/lib/units.ts';
 
 import manCoinImg from './Man-coin.png';
 import woCoinImg from './Wo-coin.png';
 
 interface TapButtonProps {
   gender?: Gender;
-  /** Возвращает, сколько начислено и был ли крит — без этого плашка не вылетит. */
+  /** Возвращает, сколько начислено и был ли крит — без этого не будет трещины. */
   onTap: () => { amount: number; crit: boolean } | null;
   disabled?: boolean;
-}
-
-interface CritBadge {
-  id: number;
-  amount: number;
-  /** Сдвиг по горизонтали, чтобы подряд идущие криты не легли друг на друга. */
-  offset: number;
 }
 
 interface Particle {
@@ -36,34 +28,65 @@ const PARTICLE_LIFETIME = 1200;
 // Радиус круглой кнопки (260px) — частицы стартуют на его границе.
 const BUTTON_RADIUS = 130;
 const PARTICLE_SIZE = 24;
-/** Сколько живёт серая плашка с суммой крита. */
-const BADGE_LIFETIME = 1200;
-const BADGE_ANIMATION = 1100;
-/** Максимум одновременных плашек — при быстрых тапах они плодятся. */
-const BADGE_LIMIT = 8;
+interface Crack {
+  id: number;
+  main: string;
+  branches: string[];
+  width: number;
+}
 
-/**
- * Трещина на монете в момент крита: главный разлом сверху вниз и
- * короткие отводки. Рисуем SVG-путями, а не спрайтом: линия остаётся
- * резкой на любом DPI и ничего не весит.
- */
-const CRACK_MAIN =
-  'M 50 6 L 45 21 L 53 32 L 42 46 L 55 57 L 46 71 L 54 84 L 50 95';
-const CRACK_BRANCHES = [
-  'M 53 32 L 66 26 L 75 29',
-  'M 42 46 L 28 39 L 20 43',
-  'M 55 57 L 69 63 L 77 60',
-  'M 46 71 L 33 77',
-];
 /** Сколько трещина держится, прежде чем растаять. */
 const CRACK_LIFETIME = 1000;
+
+const rand = (min: number, max: number): number => min + Math.random() * (max - min);
+
+/**
+ * Новая трещина на каждый крит: старт в случайной точке на краю
+ * монеты, изломанный путь к противоположной стороне и случайные
+ * отводки. Форма каждый раз другая, поэтому разлом не примелькается.
+ * Рисуем SVG-путями, а не спрайтом: линия резкая на любом DPI и
+ * ничего не весит.
+ */
+const makeCrack = (): Omit<Crack, 'id'> => {
+  const startAngle = Math.random() * Math.PI * 2;
+  let x = 50 + Math.cos(startAngle) * 46;
+  let y = 50 + Math.sin(startAngle) * 46;
+  let heading = startAngle + Math.PI + rand(-0.5, 0.5);
+
+  const steps = 6 + Math.floor(Math.random() * 4);
+  const points = [`M ${x.toFixed(1)} ${y.toFixed(1)}`];
+  const branches: string[] = [];
+
+  for (let i = 0; i < steps; i += 1) {
+    heading += rand(-0.45, 0.45);
+    const length = i === steps - 1 ? rand(10, 18) : rand(6, 13);
+    x += Math.cos(heading) * length;
+    y += Math.sin(heading) * length;
+    points.push(`L ${x.toFixed(1)} ${y.toFixed(1)}`);
+
+    // Отводка уходит в сторону примерно из половины изломов.
+    if (i > 0 && i < steps - 1 && Math.random() < 0.5) {
+      const side = Math.random() < 0.5 ? 1 : -1;
+      const branchAngle = heading + side * rand(0.6, 1.1);
+      const bx = x + Math.cos(branchAngle) * rand(6, 14);
+      const by = y + Math.sin(branchAngle) * rand(6, 14);
+      const tipAngle = branchAngle + rand(-0.5, 0.5);
+      const tx = bx + Math.cos(tipAngle) * rand(4, 9);
+      const ty = by + Math.sin(tipAngle) * rand(4, 9);
+      branches.push(
+        `M ${x.toFixed(1)} ${y.toFixed(1)} L ${bx.toFixed(1)} ${by.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`,
+      );
+    }
+  }
+
+  return { main: points.join(' '), branches, width: rand(1.5, 2.2) };
+};
 
 export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
-  const [badges, setBadges] = useState<CritBadge[]>([]);
   // Живёт ровно одна трещина: новый крит перерисовывает её заново.
-  const [crack, setCrack] = useState<{ id: number } | null>(null);
+  const [crack, setCrack] = useState<Crack | null>(null);
   const crackId = useRef(0);
   const coinImg = gender === 'female' ? woCoinImg : manCoinImg;
 
@@ -92,25 +115,11 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
     }, PARTICLE_LIFETIME);
   }, []);
 
-  /** Серая плашка с суммой крита: вылетает из центра монеты и гаснет. */
-  const spawnBadge = (amount: number) => {
-    const badge: CritBadge = {
-      id: Date.now() + Math.random(),
-      amount,
-      offset: (Math.random() - 0.5) * 110,
-    };
-
-    setBadges((list) => [...list, badge].slice(-BADGE_LIMIT));
-    window.setTimeout(() => {
-      setBadges((list) => list.filter((item) => item.id !== badge.id));
-    }, BADGE_LIFETIME);
-  };
-
-  /** Разлом: прочерчиваем трещину по монете и даём ей растаять. */
+  /** Разлом: генерируем новую трещину и даём ей растаять. */
   const spawnCrack = () => {
     crackId.current += 1;
     const id = crackId.current;
-    setCrack({ id });
+    setCrack({ id, ...makeCrack() });
     window.setTimeout(() => {
       setCrack((current) => (current && current.id === id ? null : current));
     }, CRACK_LIFETIME);
@@ -120,10 +129,7 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
     if (disabled) return;
     spawnBurst();
     const result = onTap();
-    if (result?.crit) {
-      spawnBadge(result.amount);
-      spawnCrack();
-    }
+    if (result?.crit) spawnCrack();
   };
 
   return (
@@ -190,35 +196,42 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
               }}
             >
               <svg viewBox="0 0 100 100" width="100%" height="100%">
-                <motion.path
-                  d={CRACK_MAIN}
-                  fill="none"
-                  stroke="#2b1400"
-                  strokeWidth={1.9}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: 0.9 }}
-                  transition={{ duration: 0.3, ease: 'easeOut' }}
-                />
-                {CRACK_BRANCHES.map((d, index) => (
+                <defs>
+                  <clipPath id={`wc-crack-clip-${crack.id}`}>
+                    <circle cx="50" cy="50" r="46" />
+                  </clipPath>
+                </defs>
+                <g clipPath={`url(#wc-crack-clip-${crack.id})`}>
                   <motion.path
-                    key={d}
-                    d={d}
+                    d={crack.main}
                     fill="none"
                     stroke="#2b1400"
-                    strokeWidth={1.5}
+                    strokeWidth={crack.width}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     initial={{ pathLength: 0, opacity: 0 }}
-                    animate={{ pathLength: 1, opacity: 0.75 }}
-                    transition={{
-                      duration: 0.22,
-                      ease: 'easeOut',
-                      delay: 0.1 + index * 0.035,
-                    }}
+                    animate={{ pathLength: 1, opacity: 0.9 }}
+                    transition={{ duration: 0.3, ease: 'easeOut' }}
                   />
-                ))}
+                  {crack.branches.map((d, index) => (
+                    <motion.path
+                      key={`${crack.id}-b${index}`}
+                      d={d}
+                      fill="none"
+                      stroke="#2b1400"
+                      strokeWidth={crack.width * 0.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      initial={{ pathLength: 0, opacity: 0 }}
+                      animate={{ pathLength: 1, opacity: 0.75 }}
+                      transition={{
+                        duration: 0.22,
+                        ease: 'easeOut',
+                        delay: 0.1 + index * 0.035,
+                      }}
+                    />
+                  ))}
+                </g>
               </svg>
             </motion.div>
           )}
@@ -263,49 +276,6 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
               willChange: 'transform, opacity',
             }}
           />
-        ))}
-      </AnimatePresence>
-
-      {/* Крит: просто серые цифры, поднимаются от монеты и гаснут */}
-      <AnimatePresence>
-        {badges.map((badge) => (
-          <motion.div
-            key={badge.id}
-            initial={{ opacity: 0, y: 40, scale: 0.55, x: badge.offset }}
-            animate={{
-              opacity: [0, 1, 1, 0],
-              y: [40, -34, -84, -136],
-              scale: [0.55, 1.14, 1, 1],
-            }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: BADGE_ANIMATION / 1000, ease: 'easeOut' }}
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              top: 54,
-              display: 'flex',
-              justifyContent: 'center',
-              pointerEvents: 'none',
-              zIndex: 4,
-              willChange: 'transform, opacity',
-            }}
-          >
-            <span
-              style={{
-                // Без плашки и свечения: чистые серые цифры, читаемые
-                // и на тёмном фоне, и поверх оранжевой монеты.
-                color: '#b9bdc6',
-                fontSize: 16,
-                fontWeight: 900,
-                lineHeight: 1.2,
-                fontVariantNumeric: 'tabular-nums',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              +{formatTokens(badge.amount)}
-            </span>
-          </motion.div>
         ))}
       </AnimatePresence>
     </div>
