@@ -99,11 +99,15 @@ export const FriendsSheet: FC<FriendsSheetProps> = ({ friends, referralLink, onC
       aria-label="Пригласить друзей"
       style={{
         position: 'fixed',
-        inset: 0,
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 78,
         zIndex: 120,
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
+        paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
       <motion.div
@@ -127,9 +131,6 @@ export const FriendsSheet: FC<FriendsSheetProps> = ({ friends, referralLink, onC
           position: 'relative',
           width: '100%',
           maxWidth: 480,
-          // Поднимаем плашку над нижним меню — само меню ниже плашки,
-          // поэтому тапы по кнопкам навигации через подложку не проходят.
-          transform: 'translateY(calc(-76px - env(safe-area-inset-bottom)))',
           marginTop: 'auto',
           background: 'var(--wc-surface)',
           borderTopLeftRadius: 20,
