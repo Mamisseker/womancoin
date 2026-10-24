@@ -99,15 +99,12 @@ export const FriendsSheet: FC<FriendsSheetProps> = ({ friends, referralLink, onC
       aria-label="Пригласить друзей"
       style={{
         position: 'fixed',
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 78,
+        inset: 0,
         zIndex: 120,
         display: 'flex',
-        alignItems: 'flex-end',
+        alignItems: 'center',
         justifyContent: 'center',
-        paddingBottom: 'env(safe-area-inset-bottom)',
+        padding: '16px',
       }}
     >
       <motion.div
@@ -130,15 +127,14 @@ export const FriendsSheet: FC<FriendsSheetProps> = ({ friends, referralLink, onC
         style={{
           position: 'relative',
           width: '100%',
-          maxWidth: 480,
-          marginTop: 'auto',
+          maxWidth: 420,
           background: 'var(--wc-surface)',
-          borderTopLeftRadius: 20,
+          borderRadius: 20,
           borderTopRightRadius: 20,
           border: '1px solid var(--wc-separator)',
-          borderBottom: 'none',
+          border: '1px solid var(--wc-separator)',
           boxShadow: 'var(--wc-shadow-2)',
-          padding: '10px 16px 16px',
+          padding: '10px 16px calc(16px + env(safe-area-inset-bottom))',
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
