@@ -133,7 +133,7 @@ export const FriendsSheet: FC<FriendsSheetProps> = ({ friends, referralLink, onC
           border: '1px solid var(--wc-separator)',
           borderBottom: 'none',
           boxShadow: 'var(--wc-shadow-2)',
-          padding: '10px 16px calc(18px + env(safe-area-inset-bottom))',
+          padding: '10px 16px calc(90px + env(safe-area-inset-bottom))',
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
