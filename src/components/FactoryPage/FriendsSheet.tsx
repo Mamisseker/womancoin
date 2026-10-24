@@ -130,8 +130,6 @@ export const FriendsSheet: FC<FriendsSheetProps> = ({ friends, referralLink, onC
           maxWidth: 420,
           background: 'var(--wc-surface)',
           borderRadius: 20,
-          borderTopRightRadius: 20,
-          border: '1px solid var(--wc-separator)',
           border: '1px solid var(--wc-separator)',
           boxShadow: 'var(--wc-shadow-2)',
           padding: '10px 16px calc(16px + env(safe-area-inset-bottom))',
