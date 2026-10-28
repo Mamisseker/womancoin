@@ -450,14 +450,18 @@ const FactoryCard: FC<FactoryCardProps> = ({
             flexShrink: 0,
           }}
         />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
             <span
               style={{
                 fontSize: 14,
                 fontWeight: 700,
                 color: 'var(--wc-text)',
                 lineHeight: 1.2,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                minWidth: 0,
               }}
             >
               {def.title}
@@ -486,6 +490,9 @@ const FactoryCard: FC<FactoryCardProps> = ({
               color: 'var(--wc-accent)',
               marginTop: 4,
               lineHeight: 1.3,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
             {def.effectText}
