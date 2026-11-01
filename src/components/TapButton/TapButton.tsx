@@ -5,6 +5,21 @@ import type { Gender } from '@/hooks/useGender.ts';
 
 import manCoinImg from './Man-coin.png';
 import woCoinImg from './Wo-coin.png';
+import crackFrame1 from './crack/f001.png';
+import crackFrame2 from './crack/f002.png';
+import crackFrame3 from './crack/f003.png';
+import crackFrame4 from './crack/f004.png';
+import crackFrame5 from './crack/f005.png';
+import crackFrame6 from './crack/f006.png';
+import crackFrame7 from './crack/f007.png';
+import crackFrame8 from './crack/f008.png';
+import crackFrame9 from './crack/f009.png';
+import crackFrame10 from './crack/f010.png';
+import crackFrame11 from './crack/f011.png';
+import crackFrame12 from './crack/f012.png';
+import crackFrame13 from './crack/f013.png';
+import crackFrame14 from './crack/f014.png';
+import crackFrame15 from './crack/f015.png';
 
 interface TapButtonProps {
   gender?: Gender;
@@ -12,6 +27,8 @@ interface TapButtonProps {
   onTap: () => { amount: number; crit: boolean } | null;
   disabled?: boolean;
 }
+
+const CRACK_FRAMES = [crackFrame1, crackFrame2, crackFrame3, crackFrame4, crackFrame5, crackFrame6, crackFrame7, crackFrame8, crackFrame9, crackFrame10, crackFrame11, crackFrame12, crackFrame13, crackFrame14, crackFrame15];
 
 interface Particle {
   id: number;
@@ -28,66 +45,18 @@ const PARTICLE_LIFETIME = 1200;
 // Радиус круглой кнопки (260px) — частицы стартуют на его границе.
 const BUTTON_RADIUS = 130;
 const PARTICLE_SIZE = 24;
-interface Crack {
-  id: number;
-  main: string;
-  branches: string[];
-  width: number;
-}
-
-/** Сколько трещина держится, прежде чем растаять. */
-const CRACK_LIFETIME = 1000;
-
-const rand = (min: number, max: number): number => min + Math.random() * (max - min);
-
-/**
- * Новая трещина на каждый крит: старт в случайной точке на краю
- * монеты, изломанный путь к противоположной стороне и случайные
- * отводки. Форма каждый раз другая, поэтому разлом не примелькается.
- * Рисуем SVG-путями, а не спрайтом: линия резкая на любом DPI и
- * ничего не весит.
- */
-const makeCrack = (): Omit<Crack, 'id'> => {
-  const startAngle = Math.random() * Math.PI * 2;
-  let x = 50 + Math.cos(startAngle) * 46;
-  let y = 50 + Math.sin(startAngle) * 46;
-  let heading = startAngle + Math.PI + rand(-0.5, 0.5);
-
-  const steps = 6 + Math.floor(Math.random() * 4);
-  const points = [`M ${x.toFixed(1)} ${y.toFixed(1)}`];
-  const branches: string[] = [];
-
-  for (let i = 0; i < steps; i += 1) {
-    heading += rand(-0.45, 0.45);
-    const length = i === steps - 1 ? rand(10, 18) : rand(6, 13);
-    x += Math.cos(heading) * length;
-    y += Math.sin(heading) * length;
-    points.push(`L ${x.toFixed(1)} ${y.toFixed(1)}`);
-
-    // Отводка уходит в сторону примерно из половины изломов.
-    if (i > 0 && i < steps - 1 && Math.random() < 0.5) {
-      const side = Math.random() < 0.5 ? 1 : -1;
-      const branchAngle = heading + side * rand(0.6, 1.1);
-      const bx = x + Math.cos(branchAngle) * rand(6, 14);
-      const by = y + Math.sin(branchAngle) * rand(6, 14);
-      const tipAngle = branchAngle + rand(-0.5, 0.5);
-      const tx = bx + Math.cos(tipAngle) * rand(4, 9);
-      const ty = by + Math.sin(tipAngle) * rand(4, 9);
-      branches.push(
-        `M ${x.toFixed(1)} ${y.toFixed(1)} L ${bx.toFixed(1)} ${by.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`,
-      );
-    }
-  }
-
-  return { main: points.join(' '), branches, width: rand(1.5, 2.2) };
-};
+/** Длительность покадрового разлома из видео. */
+const CRACK_FRAMES_MS = 500;
+const CRACK_FADE_MS = 200;
 
 export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
   // Живёт ровно одна трещина: новый крит перерисовывает её заново.
-  const [crack, setCrack] = useState<Crack | null>(null);
+  const [crack, setCrack] = useState<{ id: number } | null>(null);
+  const [crackFrame, setCrackFrame] = useState(0);
   const crackId = useRef(0);
+  const crackTimer = useRef<number | null>(null);
   const coinImg = gender === 'female' ? woCoinImg : manCoinImg;
 
   const spawnBurst = useCallback(() => {
@@ -115,14 +84,33 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
     }, PARTICLE_LIFETIME);
   }, []);
 
-  /** Разлом: генерируем новую трещину и даём ей растаять. */
+  /** Разлом: проигрываем покадровую анимацию из видео «Разлом». */
   const spawnCrack = () => {
+    if (crackTimer.current !== null) {
+      window.clearInterval(crackTimer.current);
+    }
     crackId.current += 1;
     const id = crackId.current;
-    setCrack({ id, ...makeCrack() });
-    window.setTimeout(() => {
-      setCrack((current) => (current && current.id === id ? null : current));
-    }, CRACK_LIFETIME);
+    setCrack({ id });
+    setCrackFrame(0);
+
+    const total = CRACK_FRAMES.length;
+    const interval = Math.max(16, Math.floor(CRACK_FRAMES_MS / total));
+    let frame = 0;
+    crackTimer.current = window.setInterval(() => {
+      frame += 1;
+      if (frame >= total) {
+        if (crackTimer.current !== null) {
+          window.clearInterval(crackTimer.current);
+          crackTimer.current = null;
+        }
+        window.setTimeout(() => {
+          setCrack((current) => (current && current.id === id ? null : current));
+        }, CRACK_FADE_MS);
+        return;
+      }
+      setCrackFrame(frame);
+    }, interval);
   };
 
   const handleClick = () => {
@@ -175,7 +163,7 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
           }}
         />
 
-        {/* Разлом поверх монеты: трещина прорезается по пути и гаснет. */}
+        {/* Разлом поверх монеты: покадровая анимация из видео "Разлом". */}
         <AnimatePresence>
           {crack && (
             <motion.div
@@ -186,53 +174,28 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
               exit={{ opacity: 0 }}
               transition={{
                 x: { duration: 0.35, ease: 'easeOut' },
-                opacity: { duration: 0.25 },
+                opacity: { duration: 0.22 },
               }}
               style={{
                 position: 'absolute',
                 inset: '11%',
                 pointerEvents: 'none',
                 zIndex: 1,
+                overflow: 'hidden',
+                borderRadius: '50%',
               }}
             >
-              <svg viewBox="0 0 100 100" width="100%" height="100%">
-                <defs>
-                  <clipPath id={`wc-crack-clip-${crack.id}`}>
-                    <circle cx="50" cy="50" r="46" />
-                  </clipPath>
-                </defs>
-                <g clipPath={`url(#wc-crack-clip-${crack.id})`}>
-                  <motion.path
-                    d={crack.main}
-                    fill="none"
-                    stroke="#2b1400"
-                    strokeWidth={crack.width}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    initial={{ pathLength: 0, opacity: 0 }}
-                    animate={{ pathLength: 1, opacity: 0.9 }}
-                    transition={{ duration: 0.3, ease: 'easeOut' }}
-                  />
-                  {crack.branches.map((d, index) => (
-                    <motion.path
-                      key={`${crack.id}-b${index}`}
-                      d={d}
-                      fill="none"
-                      stroke="#2b1400"
-                      strokeWidth={crack.width * 0.8}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 0.75 }}
-                      transition={{
-                        duration: 0.22,
-                        ease: 'easeOut',
-                        delay: 0.1 + index * 0.035,
-                      }}
-                    />
-                  ))}
-                </g>
-              </svg>
+              <img
+                src={CRACK_FRAMES[crackFrame]}
+                alt=""
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'block',
+                  objectFit: 'cover',
+                  pointerEvents: 'none',
+                }}
+              />
             </motion.div>
           )}
         </AnimatePresence>
