@@ -14,14 +14,13 @@
 
 import { hapticFeedback, initData } from '@tma.js/sdk-react';
 import type { FC, ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import {
   FACTORIES,
   FRIEND_REWARD,
   FRIENDS_FACTORY,
   MAX_STOCK,
-  RARE_EFFECT_LABELS,
   type CollectResult,
   type FactoryBonuses,
   type FactoryDef,
@@ -79,15 +78,6 @@ export const FactoryPage: FC<FactoryPageProps> = ({
     if (taps.count >= 5) {
       taps.count = 0;
       setDevOpen(true);
-    }
-  };
-
-  const notify = (message: string, rare = false) => {
-    try {
-      if (rare) hapticFeedback.notificationOccurred('success');
-      else hapticFeedback.impactOccurred('medium');
-    } catch {
-      // хептика недоступна вне Telegram — игнорируем
     }
   };
 
