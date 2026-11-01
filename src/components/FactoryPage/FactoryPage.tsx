@@ -82,13 +82,6 @@ export const FactoryPage: FC<FactoryPageProps> = ({
     }
   };
 
-  // Сообщение о собранном улучшении гаснет само, чтобы не засорять список.
-  useEffect(() => {
-    if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 2500);
-    return () => window.clearTimeout(id);
-  }, [toast]);
-
   const notify = (message: string, rare = false) => {
     try {
       if (rare) hapticFeedback.notificationOccurred('success');
@@ -96,19 +89,22 @@ export const FactoryPage: FC<FactoryPageProps> = ({
     } catch {
       // хептика недоступна вне Telegram — игнорируем
     }
-    setToast(message);
   };
 
   const handleBuy = (def: FactoryDef, cost: number) => {
     if (coins < cost) return;
-    if (buy(def.id)) notify(`${def.title} куплен`);
+    buy(def.id);
   };
 
   const handleCollect = (def: FactoryDef) => {
     const result = collect(def.id);
     if (!result || result.count <= 0) return;
-    const label = RARE_EFFECT_LABELS[result.kind];
-    notify(result.rare ? `РЕДКОЕ ×5 · ${label}` : `+${result.count} · ${label}`, result.rare);
+    try {
+      if (result.rare) hapticFeedback.notificationOccurred('success');
+      else hapticFeedback.impactOccurred('medium');
+    } catch {
+      // хептика недоступна вне Telegram — игнорируем
+    }
   };
 
   // Делим на два списка: уже работающие заводы и то, что можно купить.
@@ -165,24 +161,6 @@ export const FactoryPage: FC<FactoryPageProps> = ({
 
         <StatRow bonuses={bonuses} ratePerHour={ratePerHour} />
       </div>
-
-      {toast && (
-        <div
-          style={{
-            margin: '0 20px',
-            padding: '9px 12px',
-            borderRadius: 'var(--wc-radius-m)',
-            background: 'rgba(46, 230, 107, 0.16)',
-            border: '1px solid rgba(46, 230, 107, 0.4)',
-            color: '#7dffb0',
-            fontSize: 13,
-            fontWeight: 700,
-            flexShrink: 0,
-          }}
-        >
-          {toast}
-        </div>
-      )}
 
       {/* Прокручиваемый вниз список заводов. key меняется при правке
           каталога панелью разработчика — список читает FACTORIES заново. */}
