@@ -58,7 +58,6 @@ export const FactoryPage: FC<FactoryPageProps> = ({
   setFriends,
   referralLink,
 }) => {
-  const [toast, setToast] = useState<string | null>(null);
   // Шторка приглашений: открывается тапом по дружескому заводу.
   const [friendsOpen, setFriendsOpen] = useState(false);
 
