@@ -53,7 +53,7 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
   // Живёт ровно одна трещина: новый крит перерисовывает её заново.
-  const [crack, setCrack] = useState<{ id: number } | null>(null);
+  const [crack, setCrack] = useState<{ id: number; rot: number } | null>(null);
   const [crackFrame, setCrackFrame] = useState(0);
   const crackId = useRef(0);
   const crackTimer = useRef<number | null>(null);
@@ -91,7 +91,7 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
     }
     crackId.current += 1;
     const id = crackId.current;
-    setCrack({ id });
+    setCrack({ id, rot: Math.random() * 360 });
     setCrackFrame(0);
 
     const total = CRACK_FRAMES.length;
@@ -183,6 +183,7 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
                 zIndex: 1,
                 overflow: 'hidden',
                 borderRadius: '50%',
+                transform: `rotate(${crack.rot}deg)`,
               }}
             >
               <img
