@@ -60,7 +60,7 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
   // Живёт ровно одна трещина: новый крит перерисовывает её заново.
-  const [crack, setCrack] = useState<{ id: number; rot: number; frames: string[] } | null>(null);
+  const [crack, setCrack] = useState<{ id: number; rot: number; angle: number; dist: number; frames: string[] } | null>(null);
   const [crackFrame, setCrackFrame] = useState(0);
   const crackId = useRef(0);
   const crackTimer = useRef<number | null>(null);
@@ -99,7 +99,7 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
     crackId.current += 1;
     const id = crackId.current;
     const frames = Math.random() < 0.5 ? CRACK_FRAMES : [...CRACK_FRAMES2].reverse();
-    setCrack({ id, rot: Math.random() * 360, frames });
+    setCrack({ id, rot: Math.random() * 360, angle: Math.random() * Math.PI * 2, dist: 38 + Math.random() * 8, frames });
     setCrackFrame(0);
 
     const total = frames.length;
@@ -186,12 +186,17 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
               }}
               style={{
                 position: 'absolute',
-                inset: '11%',
+                left: '50%',
+                top: '50%',
+                width: '78%',
+                height: '78%',
+                marginLeft: '-39%',
+                marginTop: '-39%',
                 pointerEvents: 'none',
                 zIndex: 1,
                 overflow: 'hidden',
                 borderRadius: '50%',
-                transform: `rotate(${crack.rot}deg)`,
+                transform: `translate(${Math.cos(crack.angle) * crack.dist}%, ${Math.sin(crack.angle) * crack.dist}%) rotate(${crack.rot}deg)`,
               }}
             >
               <img
