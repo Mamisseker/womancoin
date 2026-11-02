@@ -165,7 +165,7 @@ export const FactoryPage: FC<FactoryPageProps> = ({
           gap: 10,
           paddingLeft: 20,
           paddingRight: 20,
-          paddingBottom: 96,
+          paddingBottom: 16,
         }}
       >
         {/* Покупное — сверху: это то, за чем игрок приходит на вкладку.
