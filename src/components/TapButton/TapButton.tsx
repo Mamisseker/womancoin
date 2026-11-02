@@ -20,6 +20,12 @@ import crackFrame12 from './crack/f012.png';
 import crackFrame13 from './crack/f013.png';
 import crackFrame14 from './crack/f014.png';
 import crackFrame15 from './crack/f015.png';
+import compFrame1 from './crack_mov/f001.png';
+import compFrame2 from './crack_mov/f002.png';
+import compFrame3 from './crack_mov/f003.png';
+import compFrame4 from './crack_mov/f004.png';
+import compFrame5 from './crack_mov/f005.png';
+import compFrame6 from './crack_mov/f006.png';
 
 interface TapButtonProps {
   gender?: Gender;
@@ -29,6 +35,7 @@ interface TapButtonProps {
 }
 
 const CRACK_FRAMES = [crackFrame1, crackFrame2, crackFrame3, crackFrame4, crackFrame5, crackFrame6, crackFrame7, crackFrame8, crackFrame9, crackFrame10, crackFrame11, crackFrame12, crackFrame13, crackFrame14, crackFrame15];
+const CRACK_FRAMES2 = [compFrame1, compFrame2, compFrame3, compFrame4, compFrame5, compFrame6];
 
 interface Particle {
   id: number;
@@ -53,7 +60,7 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
   // Живёт ровно одна трещина: новый крит перерисовывает её заново.
-  const [crack, setCrack] = useState<{ id: number; rot: number } | null>(null);
+  const [crack, setCrack] = useState<{ id: number; rot: number; frames: string[] } | null>(null);
   const [crackFrame, setCrackFrame] = useState(0);
   const crackId = useRef(0);
   const crackTimer = useRef<number | null>(null);
@@ -91,10 +98,11 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
     }
     crackId.current += 1;
     const id = crackId.current;
-    setCrack({ id, rot: Math.random() * 360 });
+    const frames = Math.random() < 0.5 ? CRACK_FRAMES : CRACK_FRAMES2;
+    setCrack({ id, rot: Math.random() * 360, frames });
     setCrackFrame(0);
 
-    const total = CRACK_FRAMES.length;
+    const total = frames.length;
     const interval = Math.max(16, Math.floor(CRACK_FRAMES_MS / total));
     let frame = 0;
     crackTimer.current = window.setInterval(() => {
@@ -187,7 +195,7 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
               }}
             >
               <img
-                src={CRACK_FRAMES[crackFrame]}
+                src={crack.frames[crackFrame]}
                 alt=""
                 style={{
                   width: '100%',
