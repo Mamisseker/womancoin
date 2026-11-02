@@ -98,7 +98,7 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
     }
     crackId.current += 1;
     const id = crackId.current;
-    const frames = Math.random() < 0.5 ? CRACK_FRAMES : CRACK_FRAMES2;
+    const frames = Math.random() < 0.5 ? CRACK_FRAMES : [...CRACK_FRAMES2].reverse();
     setCrack({ id, rot: Math.random() * 360, frames });
     setCrackFrame(0);
 
