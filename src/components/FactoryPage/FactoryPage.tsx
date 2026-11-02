@@ -165,7 +165,7 @@ export const FactoryPage: FC<FactoryPageProps> = ({
           gap: 10,
           paddingLeft: 20,
           paddingRight: 20,
-          paddingBottom: 16,
+          paddingBottom: 'calc(110px + env(safe-area-inset-bottom))',
         }}
       >
         {/* Покупное — сверху: это то, за чем игрок приходит на вкладку.
