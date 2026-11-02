@@ -95,7 +95,7 @@ export const BottomNav: FC<BottomNavProps> = ({ active, onChange }) => {
                 borderRadius: 'var(--wc-radius-m)',
                 padding: '7px 4px',
                 cursor: 'pointer',
-                background: isActive ? 'var(--wc-accent-soft)' : 'transparent',
+                background: 'transparent',
                 color: isActive ? 'var(--wc-accent)' : 'var(--wc-nav-inactive)',
                 transition: 'color 0.15s ease, background 0.15s ease',
                 WebkitTapHighlightColor: 'transparent',
