@@ -66,13 +66,13 @@ export const BottomNav: FC<BottomNavProps> = ({ active, onChange }) => {
           display: 'flex',
           justifyContent: 'space-around',
           gap: 4,
-          background: 'var(--wc-glass-bg)',
-          border: '1px solid var(--wc-glass-border)',
+          background: 'transparent',
+          border: 'none',
           borderRadius: 'var(--wc-radius-l)',
           padding: 8,
-          backdropFilter: 'blur(18px)',
-          WebkitBackdropFilter: 'blur(18px)',
-          boxShadow: 'var(--wc-shadow-2)',
+          backdropFilter: 'none',
+          WebkitBackdropFilter: 'none',
+          boxShadow: 'none',
         }}
       >
         {tabs.map((tab) => {
