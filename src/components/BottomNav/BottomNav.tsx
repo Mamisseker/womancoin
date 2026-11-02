@@ -66,7 +66,7 @@ export const BottomNav: FC<BottomNavProps> = ({ active, onChange }) => {
           display: 'flex',
           justifyContent: 'space-around',
           gap: 4,
-          background: 'var(--wc-glass-bg)',
+          background: 'transparent',
           border: '1px solid var(--wc-glass-border)',
           borderRadius: 'var(--wc-radius-l)',
           padding: 8,
