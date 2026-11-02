@@ -147,7 +147,7 @@ export const App: FC = () => {
           background:
             'radial-gradient(120% 90% at 50% -10%, rgba(255,184,0,0.12) 0%, transparent 55%), radial-gradient(100% 80% at 90% 110%, rgba(255,138,0,0.1) 0%, transparent 55%), var(--wc-bg)',
           paddingTop: 'env(safe-area-inset-top)',
-          paddingBottom: NAV_RESERVE,
+          paddingBottom: tab === 'boost' ? 0 : NAV_RESERVE,
           fontFamily:
             '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif',
         }}
