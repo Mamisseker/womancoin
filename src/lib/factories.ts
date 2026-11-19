@@ -601,12 +601,10 @@ export const collectImprovements = (
   }
 
   next.stock[id] = 0;
-  // После сбора отсчёт идёт заново — от ПОЛНОГО цикла отсюда, а не от
-  // этого момента: advanceProduction считает готовым всё, что уже
-  // наступило, и «готово прямо сейчас» превратилось бы в мгновенный
-  // плюс один. Завод собирал бы сам себя бесконечно, и ждать его было
-  // бы незачем.
-  next.readyAt[id] = now + getFactoryCycleMs(def, next.lvl[id] ?? 1, next.cooldownMs);
+  // Продолжает идти со своей скоростью после сбора.
+  if (next.readyAt[id] <= now) {
+    next.readyAt[id] = now + getFactoryCycleMs(def, next.lvl[id] ?? 1, next.cooldownMs);
+  }
 
   return { state: next, count, rare, kind };
 };
