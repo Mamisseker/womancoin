@@ -1,41 +1,16 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useCallback, useRef, useState, type FC } from 'react';
+import { useCallback, useState, type FC } from 'react';
 
 import type { Gender } from '@/hooks/useGender.ts';
 
 import manCoinImg from './Man-coin.png';
 import woCoinImg from './Wo-coin.png';
-import crackFrame1 from './crack/f001.png';
-import crackFrame2 from './crack/f002.png';
-import crackFrame3 from './crack/f003.png';
-import crackFrame4 from './crack/f004.png';
-import crackFrame5 from './crack/f005.png';
-import crackFrame6 from './crack/f006.png';
-import crackFrame7 from './crack/f007.png';
-import crackFrame8 from './crack/f008.png';
-import crackFrame9 from './crack/f009.png';
-import crackFrame10 from './crack/f010.png';
-import crackFrame11 from './crack/f011.png';
-import crackFrame12 from './crack/f012.png';
-import crackFrame13 from './crack/f013.png';
-import crackFrame14 from './crack/f014.png';
-import crackFrame15 from './crack/f015.png';
-import compFrame1 from './crack_mov/f001.png';
-import compFrame2 from './crack_mov/f002.png';
-import compFrame3 from './crack_mov/f003.png';
-import compFrame4 from './crack_mov/f004.png';
-import compFrame5 from './crack_mov/f005.png';
-import compFrame6 from './crack_mov/f006.png';
 
 interface TapButtonProps {
   gender?: Gender;
-  /** Возвращает, сколько начислено и был ли крит — без этого не будет трещины. */
   onTap: () => { amount: number; crit: boolean } | null;
   disabled?: boolean;
 }
-
-const CRACK_FRAMES = [crackFrame1, crackFrame2, crackFrame3, crackFrame4, crackFrame5, crackFrame6, crackFrame7, crackFrame8, crackFrame9, crackFrame10, crackFrame11, crackFrame12, crackFrame13, crackFrame14, crackFrame15];
-const CRACK_FRAMES2 = [compFrame1, compFrame2, compFrame3, compFrame4, compFrame5, compFrame6];
 
 interface Particle {
   id: number;
@@ -49,28 +24,16 @@ interface Particle {
 
 const BURST_COUNT = 4;
 const PARTICLE_LIFETIME = 1200;
-// Радиус круглой кнопки (260px) — частицы стартуют на его границе.
 const BUTTON_RADIUS = 130;
 const PARTICLE_SIZE = 24;
-/** Длительность покадрового разлома из видео. */
-const CRACK_FRAMES_MS = 500;
-const CRACK_FADE_MS = 200;
 
 export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
-  const buttonRef = useRef<HTMLButtonElement>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
-  // Живёт ровно одна трещина: новый крит перерисовывает её заново.
-  const [crack, setCrack] = useState<{ id: number; rot: number; angle: number; dist: number; frames: string[] } | null>(null);
-  const [crackFrame, setCrackFrame] = useState(0);
-  const crackId = useRef(0);
-  const crackTimer = useRef<number | null>(null);
   const coinImg = gender === 'female' ? woCoinImg : manCoinImg;
 
   const spawnBurst = useCallback(() => {
     const now = Date.now();
     const next: Particle[] = Array.from({ length: BURST_COUNT }, () => {
-      // Частица расходится из центра по всему периметру,
-      // стартуя на краю кнопки и вылетая за её границу.
       const angle = Math.PI * 2 * Math.random() - Math.PI;
       const jitter = (Math.random() - 0.5) * 14;
       return {
@@ -91,47 +54,15 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
     }, PARTICLE_LIFETIME);
   }, []);
 
-  /** Разлом: проигрываем покадровую анимацию из видео «Разлом». */
-  const spawnCrack = () => {
-    if (crackTimer.current !== null) {
-      window.clearInterval(crackTimer.current);
-    }
-    crackId.current += 1;
-    const id = crackId.current;
-    const frames = Math.random() < 0.5 ? CRACK_FRAMES : [...CRACK_FRAMES2].reverse();
-    setCrack({ id, rot: Math.random() * 360, angle: Math.random() * Math.PI * 2, dist: 38 + Math.random() * 8, frames });
-    setCrackFrame(0);
-
-    const total = frames.length;
-    const interval = Math.max(16, Math.floor(CRACK_FRAMES_MS / total));
-    let frame = 0;
-    crackTimer.current = window.setInterval(() => {
-      frame += 1;
-      if (frame >= total) {
-        if (crackTimer.current !== null) {
-          window.clearInterval(crackTimer.current);
-          crackTimer.current = null;
-        }
-        window.setTimeout(() => {
-          setCrack((current) => (current && current.id === id ? null : current));
-        }, CRACK_FADE_MS);
-        return;
-      }
-      setCrackFrame(frame);
-    }, interval);
-  };
-
   const handleClick = () => {
     if (disabled) return;
     spawnBurst();
-    const result = onTap();
-    if (result?.crit) spawnCrack();
+    onTap();
   };
 
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
       <motion.button
-        ref={buttonRef}
         onClick={handleClick}
         disabled={disabled}
         whileTap={{ scale: 0.93 }}
@@ -170,49 +101,6 @@ export const TapButton: FC<TapButtonProps> = ({ gender, onTap, disabled }) => {
             userSelect: 'none',
           }}
         />
-
-        {/* Разлом поверх монеты: покадровая анимация из видео "Разлом". */}
-        <AnimatePresence>
-          {crack && (
-            <motion.div
-              key={crack.id}
-              aria-hidden
-              initial={{ opacity: 1 }}
-              animate={{ x: [0, -1.5, 1.5, -1, 0] }}
-              exit={{ opacity: 0 }}
-              transition={{
-                x: { duration: 0.35, ease: 'easeOut' },
-                opacity: { duration: 0.22 },
-              }}
-              style={{
-                position: 'absolute',
-                left: '50%',
-                top: '50%',
-                width: '78%',
-                height: '78%',
-                marginLeft: '-39%',
-                marginTop: '-39%',
-                pointerEvents: 'none',
-                zIndex: 1,
-                overflow: 'hidden',
-                borderRadius: '50%',
-                transform: `translate(${Math.cos(crack.angle) * crack.dist}%, ${Math.sin(crack.angle) * crack.dist}%) rotate(${crack.rot}deg)`,
-              }}
-            >
-              <img
-                src={crack.frames[crackFrame]}
-                alt=""
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'block',
-                  objectFit: 'cover',
-                  pointerEvents: 'none',
-                }}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
       </motion.button>
 
       {/* Монеты, вылетающие из периметра кнопки */}
